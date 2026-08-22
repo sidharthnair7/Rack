@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Rack ###
+uploads/
+cache/
+.env
+application-local.properties

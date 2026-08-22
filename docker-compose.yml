@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rack
+      POSTGRES_USER: rack
+      POSTGRES_PASSWORD: rack
+    ports:
+      - "5432:5432"
+    volumes:
+      - rack_pg:/var/lib/postgresql/data
+
+volumes:
+  rack_pg:

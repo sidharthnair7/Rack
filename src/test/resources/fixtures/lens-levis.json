@@ -1,0 +1,26 @@
+{
+  "visual_matches": [
+    {
+      "position": 1,
+      "title": "Levi's 501 Original Fit Men's Jeans - Dark Stonewash",
+      "link": "https://www.levi.com/US/en_US/clothing/men/jeans/501-original/p/005010194",
+      "source": "Levi's"
+    },
+    {
+      "position": 2,
+      "title": "Levi's Men's 501 Original Fit Jeans",
+      "link": "https://www.amazon.com/example",
+      "source": "Amazon"
+    },
+    {
+      "position": 3,
+      "title": "Vintage Levi Strauss 501 denim jeans 32x32",
+      "link": "https://www.ebay.com/example",
+      "source": "eBay"
+    }
+  ],
+  "knowledge_graph": {
+    "title": "Levi's 501",
+    "type": "Jeans"
+  }
+}
