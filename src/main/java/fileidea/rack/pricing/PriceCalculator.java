@@ -6,45 +6,55 @@ import fileidea.rack.common.DemandDirection;
 import fileidea.rack.common.NotImplemented;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
-/**
- * Deterministic. Never an LLM. Suggested = median of sold comps. Range = p25–p75.
- *
- * YOU write the three methods below. Spec and examples live in PriceCalculatorTest.
- */
+
 @Component
 public class PriceCalculator {
 
-    /**
-     * YOUR LOGIC.
-     *
-     * @param soldPrices sold-comp prices, any order, may be empty
-     * @return median / 25th percentile / 75th percentile / count.
-     *         Empty input → all money fields null, n = 0.
-     *         Do not use a mean — outliers will wreck it.
-     */
+
     public PriceSnapshot compute(List<BigDecimal> soldPrices) {
-        return NotImplemented.yet("YOUR LOGIC: PriceCalculator.compute (median + p25/p75)");
+        if (soldPrices == null || soldPrices.isEmpty()) {
+            return new PriceSnapshot(null, null, null, 0);
+        }
+        List<BigDecimal> sortedPrices = soldPrices.stream()
+                .sorted(Comparator.naturalOrder())
+                .toList();
+
+        BigDecimal medianPrice = sortedPrices.get(sortedPrices.size() / 2);
+        int size= sortedPrices.size();
+        BigDecimal p25= sortedPrices.get(size / 4);
+        BigDecimal p75= sortedPrices.get((size*3)/4);
+
+        return new PriceSnapshot(medianPrice,p25,p75,size);
+
+
+
     }
 
-    /**
-     * YOUR LOGIC.
-     *
-     * Turn a 12-month Google Trends series into a single slope number.
-     * You pick the formula (first-vs-last, regression, whatever) — just be consistent.
-     */
+
     public double slope(List<Integer> trendSeries) {
-        return NotImplemented.yet("YOUR LOGIC: PriceCalculator.slope");
+        if(trendSeries == null || trendSeries.isEmpty()) {
+            return 0;
+        }
+        double slope = (trendSeries.get(trendSeries.size()-1))-trendSeries.get(0);
+        return slope;
     }
 
-    /**
-     * YOUR LOGIC.
-     *
-     * Map slope → RISING / FLAT / FALLING. Pick your own thresholds.
-     */
+
     public DemandDirection demand(double slope) {
-        return NotImplemented.yet("YOUR LOGIC: PriceCalculator.demand");
+        if(slope < 0) {
+            return DemandDirection.FALLING;
+        }
+        if(slope > 0) {
+            return DemandDirection.RISING;
+        }
+
+        return DemandDirection.FLAT;
+
     }
 
     public record PriceSnapshot(BigDecimal median, BigDecimal p25, BigDecimal p75, int n) {

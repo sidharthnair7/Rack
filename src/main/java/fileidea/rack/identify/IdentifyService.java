@@ -60,15 +60,7 @@ public class IdentifyService {
         return items.save(item);
     }
 
-    /**
-     * YOUR LOGIC.
-     *
-     * Google Lens JSON is noisy: visual_matches[].title, sometimes knowledge_graph,
-     * sometimes text_results. Pull out brand + garment type + category.
-     *
-     * Correctability is a feature — a decent guess the seller can tap to fix beats
-     * a blank field. Spec lives in IdentifyServiceTest.
-     */
+
     public Identification interpretLens(JsonNode lensJson) {
         String title= lensJson.path("knowledge_graph").path("title").asString();
         String type= lensJson.path("knowledge_graph").path("type").asString();

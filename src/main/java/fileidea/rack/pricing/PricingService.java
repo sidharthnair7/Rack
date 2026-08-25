@@ -115,24 +115,25 @@ public class PricingService {
         return comps.findByPriceEstimateId(estimateId);
     }
 
-    /**
-     * YOUR LOGIC.
-     *
-     * Build the search string for Shopping + eBay from the identified item
-     * (brand, type, whatever else you want in the query).
-     */
+
     public String searchQuery(Item item) {
-        return NotImplemented.yet("YOUR LOGIC: PricingService.searchQuery");
+        if(item==null) {
+            return "";
+        }
+        String itemBrand = item.displayBrand() == null ? "" : item.displayBrand();
+        String itemType = item.getIdentifiedType()== null ? "" : item.getIdentifiedType();
+
+        return itemBrand +" "+ itemType;
     }
 
-    /**
-     * YOUR LOGIC.
-     *
-     * Pick one retail-new anchor from Google Shopping hits. Return null if you
-     * don't trust the list.
-     */
+
     public BigDecimal pickRetail(List<ShoppingResult> shopping) {
-        return NotImplemented.yet("YOUR LOGIC: PricingService.pickRetail");
+        if(shopping==null || shopping.isEmpty()) {
+            return null;
+        }
+        ShoppingResult firstItemPrice= shopping.getFirst();
+        return firstItemPrice.retailAnchor();
+
     }
 
     private void refreshBatchTotal(Batch batch) {
