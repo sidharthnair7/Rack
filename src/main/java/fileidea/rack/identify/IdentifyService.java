@@ -70,6 +70,9 @@ public class IdentifyService {
      * a blank field. Spec lives in IdentifyServiceTest.
      */
     public Identification interpretLens(JsonNode lensJson) {
-        return NotImplemented.yet("YOUR LOGIC: IdentifyService.interpretLens");
+        String title= lensJson.path("knowledge_graph").path("title").asString();
+        String type= lensJson.path("knowledge_graph").path("type").asString();
+
+        return new Identification(title, type, type);
     }
 }
