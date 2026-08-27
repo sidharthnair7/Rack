@@ -29,4 +29,19 @@ public class TaskOrchestrator {
             return tasks.save(task);
         });
     }
+
+    /**
+     * Puts a finished step back in the queue. Used when the seller corrects something the
+     * pipeline inferred, so the downstream numbers are recomputed from the corrected input
+     * rather than left stale. Unlike {@link #enqueue}, this deliberately overrides the
+     * idempotency guard \u2014 the input changed, so the previous result is no longer valid.
+     */
+    @Transactional
+    public void requeue(String idempotencyKey) {
+        tasks.findByIdempotencyKey(idempotencyKey).ifPresent(task -> {
+            task.setStatus(TaskStatus.PENDING);
+            task.setAttempts(0);
+            tasks.save(task);
+        });
+    }
 }

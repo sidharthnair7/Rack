@@ -67,7 +67,8 @@ public final class Dtos {
                 listing.getTitle(),
                 listing.getDescription(),
                 listing.getAskingPrice(),
-                listing.getPublishedAt()
+                listing.getPublishedAt(),
+                listing.getCheckoutUrl()
         );
     }
 
@@ -82,9 +83,9 @@ public final class Dtos {
     }
 
     public static PricePanelResponse pricePanel(Item item, PriceEstimate estimate, List<Comp> comps) {
-        int n = estimate.getMedianSoldPrice() == null ? 0 : comps.size();
+        int n = estimate.getMedianSoldPrice() == null ? 0 : estimate.getCompCount();
         String warning = n > 0 && n < 4
-                ? "Limited comp data (" + n + " sales found) — treat as an estimate."
+                ? "Limited comp data (" + n + " listings found) — treat as an estimate."
                 : null;
         String brand = item.displayBrand() == null ? "Unknown" : item.displayBrand();
         String type = item.getIdentifiedType() == null ? "" : item.getIdentifiedType();

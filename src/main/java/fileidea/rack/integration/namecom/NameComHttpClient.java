@@ -79,7 +79,7 @@ public class NameComHttpClient implements NameComClient {
         body.put("type", type);
         body.put("answer", answer);
         body.put("ttl", 300);
-        post("/core/v1/domains/" + domain + "/records", body);
+        post("/core/v1/dns/" + domain + "/records", body);
     }
 
     @Override
@@ -93,7 +93,8 @@ public class NameComHttpClient implements NameComClient {
     @Override
     public void createUrlForward(String domain, String host, String destination) {
         requireCreds();
-        post("/core/v1/domains/" + domain + "/urlForwardings", Map.of(
+        post("/core/v1/urlForwardings", Map.of(
+                "domainName", domain,
                 "host", host == null ? "" : host,
                 "forwardsTo", destination
         ));

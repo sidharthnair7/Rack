@@ -63,10 +63,20 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- .env support is hand-rolled in fileidea.rack.config.DotenvEnvironmentPostProcessor
+             rather than pulled from a library: the obvious choice (me.paulschwarz:spring-dotenv)
+             registers itself via the legacy META-INF/spring.factories mechanism, last published
+             in 2023, and silently does not load under Spring Boot 4.1.1 — verified by booting
+             with a probe value in .env and confirming the Environment never saw it. Rather than
+             hunt for a library that still works with a current Boot version, this is ~30 lines
+             using the extension point Boot 4 actually supports. -->
+
+        <!-- runtime, not test: the 'dev' profile runs the whole app on H2 so the repo
+             can be cloned and started with no Docker and no Postgres. -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

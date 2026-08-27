@@ -23,10 +23,11 @@ public class TemplateCopyGenerator implements CopyGenerator {
     @Override
     public String listingDescription(String brand, String type, String category, String condition) {
         return listingTitle(brand, type, category)
-                + " in "
-                + blankTo(condition, "good")
-                + " condition. Photographed from a closet pile, cleaned up for the listing. "
-                + "Price is from recent sold comps, not a guess.";
+                + ", "
+                + blankTo(condition, "good").toLowerCase()
+                + " condition. Shot and retouched from the seller's own photo. "
+                + "The asking price is the median of comparable listings for this piece "
+                + "— every one of them is listed below, and every one is clickable.";
     }
 
     @Override

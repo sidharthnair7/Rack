@@ -11,9 +11,15 @@ import fileidea.rack.imaging.ImagingService;
 import fileidea.rack.listing.ListingService;
 import fileidea.rack.pricing.PricingService;
 
+import jakarta.annotation.PreDestroy;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 @ConditionalOnProperty(prefix = "rack.tasks", name = "poller-enabled", havingValue = "true")
@@ -41,14 +47,56 @@ public class TaskPoller {
         this.listingService = listingService;
     }
 
+    /** A task that has failed this many times stops being retried, so one bad photo cannot loop. */
+    private static final int MAX_ATTEMPTS = 4;
+
+    /**
+     * Items are independent chains, so they are worked in parallel. Serial dispatch meant the
+     * whole batch moved at the speed of the slowest vendor call, one item at a time.
+     */
+    private final ExecutorService workers = Executors.newFixedThreadPool(4);
+
+    /** Guards against the next tick re-dispatching a task that is still running here. */
+    private final Set<Long> running = ConcurrentHashMap.newKeySet();
+
     @Scheduled(fixedDelayString = "${rack.tasks.poll-interval-ms:15000}")
     public void poll() {
         List<VendorTask> due = new ArrayList<>();
         due.addAll(tasks.findByStatus(TaskStatus.PENDING));
         due.addAll(tasks.findByStatus(TaskStatus.IN_FLIGHT));
         for (VendorTask task : due) {
-            dispatch(task);
+            Long taskId = task.getId();
+            if (taskId == null || !running.add(taskId)) {
+                continue;
+            }
+            if (task.getAttempts() >= MAX_ATTEMPTS) {
+                log.warn("task {} gave up after {} attempts", taskId, task.getAttempts());
+                task.setStatus(TaskStatus.ERROR);
+                tasks.save(task);
+                running.remove(taskId);
+                continue;
+            }
+            // execute(), not submit(): submit() parks any Throwable inside a Future that nobody
+            // reads, so an Error (as opposed to an Exception) vanishes without a trace while
+            // attempts still climb to the retry ceiling. Catching Throwable here means a failure
+            // is always attributable to a task instead of disappearing.
+            workers.execute(() -> {
+                try {
+                    dispatch(task);
+                } catch (Throwable t) {
+                    log.error("task {} threw {} outside normal handling", taskId, t.getClass().getName(), t);
+                    task.setStatus(TaskStatus.ERROR);
+                    tasks.save(task);
+                } finally {
+                    running.remove(taskId);
+                }
+            });
         }
+    }
+
+    @PreDestroy
+    void shutdown() {
+        workers.shutdownNow();
     }
 
     private void dispatch(VendorTask task) {

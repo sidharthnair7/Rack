@@ -77,7 +77,7 @@ public class ImagingService {
                 workingFileId = relit.dstId();
             }
             if (flags.enhance()) {
-                StageResult enhanced = runStage(item, ImageKind.RELIT, "enhance", current, workingFileId, Map.of("scale", 2));
+                StageResult enhanced = runStage(item, ImageKind.ENHANCED, "enhance", current, workingFileId, Map.of("scale", 2));
                 current = enhanced.bytes();
                 workingFileId = enhanced.dstId();
             }
@@ -103,6 +103,7 @@ public class ImagingService {
         List<ImageAsset> all = assets.findByItemId(itemId);
         return firstUrl(all, ImageKind.ON_MODEL)
                 .or(() -> firstUrl(all, ImageKind.STUDIO))
+                .or(() -> firstUrl(all, ImageKind.ENHANCED))
                 .or(() -> firstUrl(all, ImageKind.RELIT))
                 .or(() -> firstUrl(all, ImageKind.CUTOUT))
                 .or(() -> firstUrl(all, ImageKind.ORIGINAL))
@@ -156,23 +157,35 @@ public class ImagingService {
         }
     }
 
+    /** Hard ceiling per stage. Five stages x five minutes was longer than any demo take. */
+    private static final long STAGE_TIMEOUT_MS = 120_000L;
+
+    /**
+     * Perfect Corp jobs typically finish in seconds, so poll tightly at first and back off.
+     * The previous fixed 15s floor meant a job that finished in two seconds still cost fifteen,
+     * which multiplied across four stages and every item in the batch.
+     */
     private TaskResult wait(Item item, ImageKind kind, String service, String taskId) throws InterruptedException {
         ImageAsset pending = save(item, kind, null, TaskStatus.IN_FLIGHT, taskId);
-        for (int i = 0; i < 20; i++) {
+        long deadline = System.currentTimeMillis() + STAGE_TIMEOUT_MS;
+        long backoffMs = 1_500L;
+        while (System.currentTimeMillis() < deadline) {
             TaskResult result = perfectCorp.poll(service, taskId);
-            int sleepSec = result.pollingIntervalSec() == null ? 15 : Math.max(5, result.pollingIntervalSec());
             if (result.success()) {
                 pending.setStatus(TaskStatus.SUCCESS);
                 assets.save(pending);
                 return result;
             }
             if (!result.running()) {
+                log.warn("{} task {} for item {} ended as '{}'", service, taskId, item.getId(), result.status());
                 pending.setStatus(TaskStatus.ERROR);
                 assets.save(pending);
                 return null;
             }
-            Thread.sleep(sleepSec * 1000L);
+            Thread.sleep(Math.min(backoffMs, Math.max(0, deadline - System.currentTimeMillis())));
+            backoffMs = Math.min(backoffMs * 2, 10_000L);
         }
+        log.warn("{} task {} for item {} timed out after {}ms", service, taskId, item.getId(), STAGE_TIMEOUT_MS);
         pending.setStatus(TaskStatus.ERROR);
         assets.save(pending);
         return null;
@@ -222,19 +235,17 @@ public class ImagingService {
         String raw = ((item.getCategory() == null ? "" : item.getCategory()) + " "
                 + (item.getIdentifiedType() == null ? "" : item.getIdentifiedType()))
                 .toLowerCase(Locale.ROOT);
-        if (raw.contains("jean") || raw.contains("pant") || raw.contains("trouser") || raw.contains("skirt")) {
+        if (raw.contains("dress") || raw.contains("jumpsuit") || raw.contains("gown")) {
+            return "full_body";
+        }
+        if (raw.contains("jean") || raw.contains("pant") || raw.contains("trouser")
+                || raw.contains("skirt") || raw.contains("short") || raw.contains("bottom")) {
             return "lower_body";
         }
-        if (raw.contains("shoe") || raw.contains("sneaker") || raw.contains("boot")) {
-            return "shoes";
-        }
-        if (raw.contains("jacket") || raw.contains("coat") || raw.contains("hoodie")) {
-            return "outerwear";
-        }
-        if (raw.contains("shirt") || raw.contains("tee") || raw.contains("top") || raw.contains("sweater")) {
-            return "upper_body";
-        }
-        return "auto";
+        // Anything else is treated as upper body: it is the value the try-on service is most
+        // likely to accept, and a wrong-but-valid category degrades to a poor render, whereas an
+        // invented one ("auto", "outerwear") is rejected outright and loses the stage entirely.
+        return "upper_body";
     }
 
     private record StageResult(byte[] bytes, String dstId) {

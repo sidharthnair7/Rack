@@ -4,8 +4,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -21,9 +23,13 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 
 @Component
 public class SerpApiHttpClient implements SerpApiClient {
@@ -80,29 +86,34 @@ public class SerpApiHttpClient implements SerpApiClient {
     }
 
     @Override
-    public List<EbaySoldComp> ebaySold(String query) {
+    public List<EbayComp> ebayComps(String query) {
+        // No show_only=Sold: since eBay moved sold/completed listings behind a login (July 2026)
+        // that filter returns zero rows and takes ~27s doing it, while an unfiltered query
+        // returns 60 rows in ~2s. Verified directly against the live API, not assumed.
         JsonNode root = cached("ebay-" + sha256(query.getBytes()), () ->
                 search(uri -> uri
                         .queryParam("engine", "ebay")
                         .queryParam("_nkw", query)
-                        .queryParam("ebay_domain", "ebay.com")
-                        .queryParam("show_only", "Sold")));
-        List<EbaySoldComp> out = new ArrayList<>();
+                        .queryParam("ebay_domain", "ebay.com")));
+        List<EbayComp> out = new ArrayList<>();
         JsonNode results = root.path("organic_results");
         if (results.isArray()) {
             for (JsonNode hit : results) {
-                BigDecimal price = decimal(hit, "extracted_price");
+                BigDecimal price = ebayPrice(hit);
                 String link = text(hit, "link");
                 if (price == null || link == null) {
                     continue;
                 }
-                out.add(new EbaySoldComp(
+                out.add(new EbayComp(
                         text(hit, "title"),
                         price,
                         parseDate(hit),
                         link
                 ));
             }
+        }
+        if (out.isEmpty() && results.isArray() && !results.isEmpty()) {
+            log.warn("eBay returned {} rows but none had a usable price/link \u2014 check the response shape", results.size());
         }
         return out;
     }
@@ -133,13 +144,24 @@ public class SerpApiHttpClient implements SerpApiClient {
 
     private String upload(byte[] image) {
         requireLive("image upload");
-        MultipartBodyBuilder body = new MultipartBodyBuilder();
-        body.part("image", image).filename("item.jpg").contentType(MediaType.IMAGE_JPEG);
-        body.part("api_key", props.apiKey());
+        // Built as a plain MultiValueMap of Resource/String parts rather than with
+        // MultipartBodyBuilder: that builder pulls in org.reactivestreams.Publisher, which is not
+        // on a servlet-stack classpath, so it threw NoClassDefFoundError on every single image
+        // upload — i.e. Lens identification could never have worked. This is the servlet-native
+        // form and needs no reactive dependency.
+        ByteArrayResource file = new ByteArrayResource(image) {
+            @Override
+            public String getFilename() {
+                return "item.jpg";
+            }
+        };
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("image", file);
+        body.add("api_key", props.apiKey());
         String json = http.post()
                 .uri("https://serpapi.com/image")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(body.build())
+                .body(body)
                 .retrieve()
                 .body(String.class);
         JsonNode node = readTree(json);
@@ -228,16 +250,62 @@ public class SerpApiHttpClient implements SerpApiClient {
         return new BigDecimal(raw);
     }
 
-    private static Instant parseDate(JsonNode hit) {
-        String raw = text(hit, "date", "sold_date");
+    /**
+     * SerpApi's eBay engine nests price as {"raw": "$62.00", "extracted": 62.0} on organic_results,
+     * unlike google_shopping which exposes a flat extracted_price. Ranged listings use from/to.
+     * Every shape is tried so a schema tweak on their side degrades to fewer comps, not zero.
+     */
+    static BigDecimal ebayPrice(JsonNode hit) {
+        BigDecimal flat = decimal(hit, "extracted_price");
+        if (flat != null) {
+            return flat;
+        }
+        JsonNode price = hit.path("price");
+        if (price.isNumber()) {
+            return price.decimalValue();
+        }
+        BigDecimal nested = decimal(price, "extracted");
+        if (nested != null) {
+            return nested;
+        }
+        BigDecimal from = decimal(price.path("from"), "extracted");
+        if (from != null) {
+            return from;
+        }
+        return decimal(price, "raw");
+    }
+
+    private static final DateTimeFormatter[] SOLD_DATE_FORMATS = {
+            DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US),
+            DateTimeFormatter.ofPattern("MMM d yyyy", Locale.US),
+            DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US),
+            DateTimeFormatter.ISO_LOCAL_DATE
+    };
+
+    /**
+     * eBay sold dates arrive as human strings ("Sold  Aug 14, 2026"), never ISO-8601,
+     * so Instant.parse alone silently loses every date the price panel wants to show.
+     */
+    static Instant parseDate(JsonNode hit) {
+        String raw = text(hit, "date", "sold_date", "sold_at");
         if (raw == null) {
             return null;
         }
+        String cleaned = raw.replaceAll("(?i)\\bsold\\b", "").replace(",", ", ").replaceAll("\\s+", " ").trim();
+        cleaned = cleaned.replace(", ", ", ").replaceAll(",\\s*,", ",").trim();
         try {
             return Instant.parse(raw);
         } catch (Exception ignored) {
-            return null;
+            // fall through to the human formats below
         }
+        for (DateTimeFormatter format : SOLD_DATE_FORMATS) {
+            try {
+                return LocalDate.parse(cleaned, format).atStartOfDay(ZoneOffset.UTC).toInstant();
+            } catch (Exception ignored) {
+                // try the next pattern
+            }
+        }
+        return null;
     }
 
     private static String sha256(byte[] bytes) {

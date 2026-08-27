@@ -11,6 +11,7 @@ import fileidea.rack.intake.BatchRepository;
 import fileidea.rack.intake.Item;
 import fileidea.rack.intake.ItemRepository;
 import fileidea.rack.integration.llm.CopyGenerator;
+import fileidea.rack.integration.stripe.StripeClient;
 import fileidea.rack.pricing.PriceEstimate;
 import fileidea.rack.pricing.PriceEstimateRepository;
 
@@ -26,19 +27,22 @@ public class ListingService {
     private final ListingRepository listings;
     private final PriceEstimateRepository estimates;
     private final CopyGenerator copy;
+    private final StripeClient stripe;
 
     public ListingService(
             ItemRepository items,
             BatchRepository batches,
             ListingRepository listings,
             PriceEstimateRepository estimates,
-            CopyGenerator copy
+            CopyGenerator copy,
+            StripeClient stripe
     ) {
         this.items = items;
         this.batches = batches;
         this.listings = listings;
         this.estimates = estimates;
         this.copy = copy;
+        this.stripe = stripe;
     }
 
     @Transactional
@@ -52,6 +56,7 @@ public class ListingService {
         }
 
         Listing listing = listings.findByItemId(itemId).orElseGet(Listing::new);
+        BigDecimal previousPrice = listing.getAskingPrice();
         listing.setItem(item);
         listing.setTitle(copy.listingTitle(item.displayBrand(), item.getIdentifiedType(), item.getCategory()));
         listing.setDescription(copy.listingDescription(
@@ -62,6 +67,14 @@ public class ListingService {
         ));
         listing.setAskingPrice(asking);
         listing.setPublishedAt(Instant.now());
+
+        // Re-issue the checkout whenever the price changes - a brand correction re-runs publish -
+        // so a buyer can never reach a link that still charges yesterday's number.
+        boolean repriced = previousPrice == null || previousPrice.compareTo(asking) != 0;
+        if (repriced || listing.getCheckoutUrl() == null) {
+            listing.setCheckoutUrl(stripe.createCheckoutLink(
+                    listing.getTitle(), listing.getDescription(), asking));
+        }
         listings.save(listing);
 
         item.setStatus(ItemStatus.LISTED);
@@ -94,7 +107,9 @@ public class ListingService {
         long failed = all.stream().filter(i -> i.getStatus() == ItemStatus.FAILED).count();
         if (listed == all.size()) {
             batch.setStatus(BatchStatus.COMPLETE);
-        } else if (listed > 0 && failed > 0) {
+        } else if (listed + failed == all.size()) {
+            // Everything has settled, some of it badly. A partly-listed batch is a real outcome,
+            // not a stuck one, and the storefront still shows the items that priced cleanly.
             batch.setStatus(BatchStatus.PARTIAL_FAILURE);
         } else {
             batch.setStatus(BatchStatus.PUBLISHING);

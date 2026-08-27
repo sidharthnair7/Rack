@@ -9,6 +9,7 @@ public record ListingResponse(
         String title,
         String description,
         BigDecimal askingPrice,
-        Instant publishedAt
+        Instant publishedAt,
+        String checkoutUrl
 ) {
 }

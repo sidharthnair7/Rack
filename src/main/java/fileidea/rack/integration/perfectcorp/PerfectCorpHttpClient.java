@@ -8,6 +8,7 @@ import fileidea.rack.config.PerfectCorpProperties;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,7 +43,11 @@ public class PerfectCorpHttpClient implements PerfectCorpClient {
         if (fileId == null || url == null) {
             throw new IllegalStateException("Perfect Corp upload missing file_id/url: " + root);
         }
-        RestClient.RequestBodySpec put = http.put().uri(url);
+        // URI.create, not the String overload: RestClient treats a String uri as a template and
+        // re-encodes it, which mangles the percent-encoded slashes inside a presigned S3 URL's
+        // X-Amz-Credential and gets every upload rejected with AuthorizationQueryParametersError.
+        // Passing an already-parsed URI tells RestClient the URL is final - do not touch it.
+        RestClient.RequestBodySpec put = http.put().uri(URI.create(url));
         JsonNode headers = request.path("headers");
         if (headers instanceof tools.jackson.databind.node.ObjectNode objectNode) {
             objectNode.properties().forEach(e -> put.header(e.getKey(), e.getValue().asString()));
@@ -83,7 +88,8 @@ public class PerfectCorpHttpClient implements PerfectCorpClient {
 
     @Override
     public byte[] download(String url) {
-        byte[] bytes = http.get().uri(url).retrieve().body(byte[].class);
+        // Same presigned-URL hazard as upload(): never let RestClient re-encode a result URL.
+        byte[] bytes = http.get().uri(URI.create(url)).retrieve().body(byte[].class);
         if (bytes == null || bytes.length == 0) {
             throw new IllegalStateException("empty download from " + url);
         }

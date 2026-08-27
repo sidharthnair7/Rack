@@ -54,6 +54,13 @@ public class PriceEstimate {
     @Enumerated(EnumType.STRING)
     private DemandDirection demandDirection;
 
+    /**
+      * How many comparable listings the median was actually computed from. Distinct from the
+      * number of Comp rows stored: the median uses every result, while only a sample is kept
+      * and rendered so a listing page stays a panel rather than a wall of links.
+      */
+    private int compCount;
+
     private Instant computedAt;
 
     @PrePersist

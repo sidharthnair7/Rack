@@ -42,4 +42,8 @@ public class Listing {
     private BigDecimal askingPrice;
 
     private Instant publishedAt;
+
+    /** Hosted Stripe checkout for this one item. Null when Stripe is not configured. */
+    @Column(length = 512)
+    private String checkoutUrl;
 }

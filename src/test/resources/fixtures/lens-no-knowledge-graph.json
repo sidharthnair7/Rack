@@ -1,0 +1,36 @@
+{
+  "search_metadata": {
+    "status": "Success"
+  },
+  "visual_matches": [
+    {
+      "position": 1,
+      "title": "Carhartt Detroit Jacket Blanket Lined Duck Canvas Brown",
+      "link": "https://www.example-one.com/listing/1",
+      "source": "Grailed"
+    },
+    {
+      "position": 2,
+      "title": "Vintage Carhartt J97 Detroit jacket, size L",
+      "link": "https://www.example-two.com/listing/2",
+      "source": "eBay"
+    },
+    {
+      "position": 3,
+      "title": "Carhartt Men's Duck Detroit Jacket - Brown",
+      "link": "https://www.example-three.com/listing/3",
+      "source": "Amazon"
+    },
+    {
+      "position": 4,
+      "title": "Workwear jacket brown canvas",
+      "link": "https://www.example-four.com/listing/4",
+      "source": "Depop"
+    }
+  ],
+  "related_content": [
+    {
+      "query": "carhartt detroit jacket"
+    }
+  ]
+}

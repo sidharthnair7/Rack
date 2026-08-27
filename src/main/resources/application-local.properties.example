@@ -1,0 +1,20 @@
+# Copy to application-local.properties (gitignored) and run with:
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+#
+# Environment variables are preferred over this file - see SETUP.md.
+# Never put real keys in application.properties; that file is tracked.
+
+rack.serpapi.api-key=
+rack.serpapi.cache-only=false
+
+rack.perfectcorp.api-key=
+# A SYNTHETIC model image - generate one with Perfect Corp's AI Avatar Generator.
+# Never a photograph of a real person.
+rack.perfectcorp.model-url=
+
+# Sandbox by default. Switch to https://api.name.com only for the real demo domain.
+rack.namecom.base-url=https://api.dev.name.com
+rack.namecom.username=
+rack.namecom.token=
+# Public IP of the deployed app; without it no A record is written.
+rack.namecom.storefront-ip=
