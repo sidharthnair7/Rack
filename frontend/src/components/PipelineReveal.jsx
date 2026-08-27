@@ -28,8 +28,11 @@ const STAGES = [
   },
   {
     id: 'studio',
-    label: 'STUDIO LIT',
-    sublabel: 'Professional product shot',
+    // Named for the relight stage, not the ai-studio one: those templates turned out to be themed
+    // portrait scenes rather than product backdrops, so that stage is off and claiming it here
+    // would describe something the pipeline does not do.
+    label: 'RELIT & SHARPENED',
+    sublabel: 'Bedroom lighting corrected',
     icon: '💡',
   },
   {
@@ -39,6 +42,11 @@ const STAGES = [
     icon: '👤',
   },
 ];
+
+// Each reveal stage corresponds to a real ImageKind the backend produces, so this section can
+// show the actual pipeline output instead of standing in for it. Falls back to the gradient when
+// nothing has been published yet — a placeholder is honest, a staged example would not be.
+const STAGE_KINDS = ['ORIGINAL', 'CUTOUT', ['RELIT', 'ENHANCED'], 'ON_MODEL'];
 
 // Rose-plum gradient cards as placeholders for each stage
 const STAGE_GRADIENTS = [
@@ -60,6 +68,37 @@ export default function PipelineReveal() {
   const sublabelRef = useRef(null);
   const progressDotsRef = useRef([]);
   const [activeStage, setActiveStage] = useState(0);
+  const [shots, setShots] = useState([]);
+
+  // Pull the most recently published piece and use its real stage images.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const demo = await (await fetch('/api/demo')).json();
+        const listings = await (await fetch(`/api/stores/${demo.storeId}/listings`)).json();
+        if (!listings.length) return;
+        const latest = listings[listings.length - 1];
+        const images = await (await fetch(`/api/items/${latest.itemId}/images`)).json();
+        const urlFor = kind => {
+          const kinds = Array.isArray(kind) ? kind : [kind];
+          for (const k of kinds) {
+            const hit = images.find(i => i.kind === k && i.url);
+            if (hit) return hit.url;
+          }
+          return null;
+        };
+        const resolved = STAGE_KINDS.map(urlFor);
+        // Only use them if the pipeline genuinely transformed the photo; if every stage fell back
+        // to the original, the four cards would be the same image pretending to be a progression.
+        const distinct = new Set(resolved.filter(Boolean));
+        if (!cancelled && distinct.size > 1) setShots(resolved);
+      } catch {
+        // Landing page must render with the backend down.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const lastStageRef = useRef(0);
 
   const prefersReducedMotion =
@@ -217,6 +256,20 @@ export default function PipelineReveal() {
                 willChange: 'transform, opacity',
               }}
             >
+              {shots[i] && (
+                <img
+                  src={shots[i]}
+                  alt={stage.label}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: '20px',
+                  }}
+                />
+              )}
               {/* Inner glow overlay */}
               <div
                 style={{
@@ -227,10 +280,12 @@ export default function PipelineReveal() {
                   pointerEvents: 'none',
                 }}
               />
-              {/* Stage icon */}
-              <span style={{ fontSize: '64px', opacity: 0.6, filter: 'grayscale(0.5)' }}>
-                {stage.icon}
-              </span>
+              {/* Stage icon — only while standing in for a real photo */}
+              {!shots[i] && (
+                <span style={{ fontSize: '64px', opacity: 0.6, filter: 'grayscale(0.5)' }}>
+                  {stage.icon}
+                </span>
+              )}
             </div>
           ))}
         </div>

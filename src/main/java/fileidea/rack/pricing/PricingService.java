@@ -22,6 +22,7 @@ import fileidea.rack.task.TaskOrchestrator;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -110,17 +111,21 @@ public class PricingService {
         estimate = estimates.save(estimate);
 
         comps.deleteAll(comps.findByPriceEstimateId(estimate.getId()));
-        int stored = 0;
-        for (EbayComp hit : comparables) {
-            if (hit.price() == null || hit.sourceUrl() == null) {
-                continue;
-            }
-            // The median above used every result; only a sample is persisted as visible evidence.
-            // eBay URLs run ~400 characters each, so keeping all 60 turned the listing page into
-            // 47KB of links.
-            if (stored++ >= MAX_STORED_COMPS) {
-                break;
-            }
+        // The median above used every result, but only a sample is persisted as visible evidence
+        // (eBay URLs run ~400 characters each, so keeping all 60 made the listing page 47KB of
+        // links). Which sample matters: taking the first N produced pages that claimed
+        // "comparables run $3.90-$31.98" while displaying comps of $35,011 - the evidence
+        // contradicted the number it was supposed to support. Keeping the listings closest to the
+        // median means what a reader sees is genuinely what the price was derived from.
+        BigDecimal median = snap.median();
+        List<EbayComp> evidence = comparables.stream()
+                .filter(hit -> hit.price() != null && hit.sourceUrl() != null)
+                .sorted(Comparator.comparing(hit -> hit.price().subtract(median).abs()))
+                .limit(MAX_STORED_COMPS)
+                .sorted(Comparator.comparing(EbayComp::price))
+                .toList();
+
+        for (EbayComp hit : evidence) {
             Comp row = new Comp();
             row.setPriceEstimate(estimate);
             row.setSource(CompSource.EBAY);

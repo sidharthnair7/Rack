@@ -15,6 +15,8 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('signin');
   const [resetKey, setResetKey] = useState(0);
+  const [progress, setProgress] = useState(null);
+  const [error, setError] = useState(null);
 
   const handleLogoClick = () => {
     setStage('landing');
@@ -34,19 +36,26 @@ export default function App() {
     }
   };
 
-  const handleUpload = async (file) => {
+  const handleUpload = async (files) => {
     setStage('processing');
+    setError(null);
+    setProgress(null);
     try {
-      const result = await processImage(file);
+      // A batch really does take tens of seconds — four vendors per item, polled on a
+      // scheduler — so report progress rather than leaving a spinner with nothing behind it.
+      const result = await processImage(files, setProgress);
       setData(result);
       setStage('results');
-    } catch (error) {
-      console.error('Error processing image:', error);
+    } catch (err) {
+      // Surfaced, not swallowed: silently returning to the upload screen makes a backend that
+      // is down look identical to a user who changed their mind.
+      console.error('Error processing image:', err);
+      setError(err.message || 'Something went wrong talking to the server.');
       setStage('upload');
     }
   };
 
-  const handleReset = () => { setData(null); setStage('upload'); };
+  const handleReset = () => { setData(null); setError(null); setProgress(null); setStage('upload'); };
   const openSignIn  = () => { setAuthMode('signin');  setIsAuthModalOpen(true); };
   const openSignUp  = () => { setAuthMode('signup');  setIsAuthModalOpen(true); };
 
@@ -107,8 +116,8 @@ export default function App() {
 
         <main className="flex-1 flex flex-col w-full">
           {stage === 'landing'    && <LandingPage key={resetKey} onStart={() => setStage('upload')} onSignUp={openSignUp} />}
-          {stage === 'upload'     && <UploadSection onUpload={handleUpload} />}
-          {stage === 'processing' && <ProcessingLoader />}
+          {stage === 'upload'     && <UploadSection onUpload={handleUpload} error={error} />}
+          {stage === 'processing' && <ProcessingLoader progress={progress} />}
           {stage === 'results' && data && <ResultsDisplay data={data} onReset={handleReset} />}
         </main>
 
@@ -136,7 +145,7 @@ export default function App() {
             RACK
           </span>
           <span style={{ fontSize: '13px', color: 'var(--color-muted)', fontFamily: 'Manrope, sans-serif' }}>
-            © {new Date().getFullYear()} · AI garment appraisal
+            © {new Date().getFullYear()} · Photograph, price and publish your closet
           </span>
         </footer>
       </div>

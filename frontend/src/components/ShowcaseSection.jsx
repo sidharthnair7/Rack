@@ -1,6 +1,14 @@
 // ShowcaseSection — "One photo becomes the whole listing."
 // Layout: eyebrow + heading centred, 3-column × 2-row photo grid with badges,
 //         then a "Flat-lay → Editorial model shot → Priced listing" breadcrumb.
+//
+// The cards were fixed gradient placeholders badged "AI TRY-ON", which meant the landing page
+// promised a transformation and then showed empty pink boxes. They now pull real pairs from
+// whatever the store has actually published, so the first genuine run fills this section in.
+// The gradient remains as the fallback for a store with nothing listed yet — a placeholder is
+// honest, a fabricated example would not be.
+
+import { useEffect, useState } from 'react';
 
 const INK        = 'var(--color-ink)';
 const MUTED      = 'var(--color-muted)';
@@ -10,7 +18,44 @@ const ACCENT_TINT = 'var(--color-accent-tint)';
 
 const GRADIENT = 'linear-gradient(135deg, #d4b4bc 0%, #c9a4b0 40%, #b89099 100%)';
 
+/** Real before/after pairs from published listings, newest first. Empty until a run completes. */
+function useShowcasePairs(limit = 3) {
+  const [pairs, setPairs] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const demo = await (await fetch('/api/demo')).json();
+        const listings = await (await fetch(`/api/stores/${demo.storeId}/listings`)).json();
+        const recent = listings.slice(-limit).reverse();
+
+        const found = [];
+        for (const listing of recent) {
+          const images = await (await fetch(`/api/items/${listing.itemId}/images`)).json();
+          const pick = kind => images.find(i => i.kind === kind && i.url)?.url ?? null;
+          const before = pick('ORIGINAL');
+          const after = pick('ON_MODEL') ?? pick('STUDIO') ?? pick('ENHANCED') ?? pick('CUTOUT');
+          // Only a genuine transformation counts — if imaging fell back, both URLs are the same
+          // file and showing it as a before/after would be a claim the pipeline did not earn.
+          if (before && after && before !== after) found.push({ before, after, title: listing.title });
+        }
+        if (!cancelled) setPairs(found);
+      } catch {
+        if (!cancelled) setPairs([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [limit]);
+
+  return pairs;
+}
+
 export default function ShowcaseSection() {
+  const pairs = useShowcasePairs(3);
+  const before = i => pairs[i]?.before ?? null;
+  const after  = i => pairs[i]?.after ?? null;
+
   return (
     <section
       style={{
@@ -62,22 +107,22 @@ export default function ShowcaseSection() {
         }}
       >
         {/* Col 0, rows 0+1 — tall "before" card */}
-        <PhotoCard badge="BEFORE" gridArea="1 / 1 / 3 / 2" minHeight="340px" />
+        <PhotoCard badge="BEFORE" gridArea="1 / 1 / 3 / 2" minHeight="340px" src={before(0)} />
 
         {/* Col 1, row 0 */}
-        <PhotoCard badge="AI TRY-ON" gridArea="1 / 2 / 2 / 3" aspectRatio="16/9" />
+        <PhotoCard badge="AI TRY-ON" gridArea="1 / 2 / 2 / 3" aspectRatio="16/9" src={after(0)} />
 
         {/* Col 2, row 0 */}
-        <PhotoCard badge="BEFORE" gridArea="1 / 3 / 2 / 4" aspectRatio="16/9" />
+        <PhotoCard badge="BEFORE" gridArea="1 / 3 / 2 / 4" aspectRatio="16/9" src={before(1)} />
 
         {/* Col 1, row 1 */}
-        <PhotoCard badge="AI TRY-ON" gridArea="2 / 2 / 3 / 3" aspectRatio="16/9" />
+        <PhotoCard badge="AI TRY-ON" gridArea="2 / 2 / 3 / 3" aspectRatio="16/9" src={after(1)} />
 
         {/* Col 2, row 1 */}
-        <PhotoCard badge="AI TRY-ON" gridArea="2 / 3 / 3 / 4" aspectRatio="16/9" />
+        <PhotoCard badge="AI TRY-ON" gridArea="2 / 3 / 3 / 4" aspectRatio="16/9" src={after(2)} />
 
         {/* Col 0+1, row 2 — wide "before" card */}
-        <PhotoCard badge="BEFORE" gridArea="3 / 1 / 4 / 3" minHeight="200px" />
+        <PhotoCard badge="BEFORE" gridArea="3 / 1 / 4 / 3" minHeight="200px" src={before(2)} />
       </div>
 
       {/* Breadcrumb */}
@@ -104,7 +149,7 @@ export default function ShowcaseSection() {
   );
 }
 
-function PhotoCard({ badge, gridArea, aspectRatio, minHeight }) {
+function PhotoCard({ badge, gridArea, aspectRatio, minHeight, src }) {
   const isBefore = badge === 'BEFORE';
   return (
     <div
@@ -118,6 +163,14 @@ function PhotoCard({ badge, gridArea, aspectRatio, minHeight }) {
         minHeight: minHeight || undefined,
       }}
     >
+      {src && (
+        <img
+          src={src}
+          alt={badge === 'BEFORE' ? 'Photo as taken' : 'Rendered on a model'}
+          loading="lazy"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      )}
       {/* Subtle inner gradient overlay for depth */}
       <div
         style={{

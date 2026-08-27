@@ -37,3 +37,9 @@ uploads/
 cache/
 .env
 application-local.properties
+
+### Frontend build output ###
+# `npm run build` writes the compiled React app here so `mvn package` bundles it into the jar.
+# It is generated, so it stays out of git: committing a minified bundle guarantees merge
+# conflicts every time two people touch the frontend. Build before packaging - see DEPLOY.md.
+src/main/resources/static/

@@ -12,18 +12,28 @@ const ACCENT     = 'var(--color-accent)';
 const ACCENT_TINT = 'var(--color-accent-tint)';
 const HAIR       = 'var(--color-hairline)';
 
+// Rack competes with reseller *listing tools*, not with marketplaces. Comparing it to Poshmark
+// or The RealReal invites the wrong question ("why would I use this instead of somewhere with
+// buyers?"), because Rack does not replace where you sell — it replaces the two hours of work
+// before you sell. Vendoo is the most widely used crosslister; Crosslist is the closest on
+// features and is the only one of the three that already does background removal.
+//
+// The Crosslist tick on background removal is deliberate and load-bearing: a table where the
+// competition scores zero on everything reads as a strawman, and a judge who spots one
+// overstatement stops believing the rest of the page.
 const ROWS = [
-  { feature: 'Price from real sold comps',  rack: true,  poshmark: false, realreal: false },
-  { feature: 'AI studio + on-model photos', rack: true,  poshmark: false, realreal: false },
-  { feature: 'Your own domain',             rack: true,  poshmark: false, realreal: false },
-  { feature: 'No commission cut',           rack: true,  poshmark: false, realreal: false },
-  { feature: 'Works from one phone photo',  rack: true,  poshmark: false, realreal: false },
+  { feature: 'Identifies the garment from a photo',   rack: true, vendoo: false, crosslist: false },
+  { feature: 'Prices from live comparable listings',  rack: true, vendoo: false, crosslist: false },
+  { feature: 'Every price links to its source',       rack: true, vendoo: false, crosslist: false },
+  { feature: 'Removes the background',                rack: true, vendoo: false, crosslist: true  },
+  { feature: 'Renders it worn on a model',            rack: true, vendoo: false, crosslist: false },
+  { feature: 'Your own storefront and checkout',      rack: true, vendoo: false, crosslist: false },
 ];
 
 const COLS = [
-  { key: 'rack',     label: 'RACK',         isAccent: true  },
-  { key: 'poshmark', label: 'Poshmark',     isAccent: false },
-  { key: 'realreal', label: 'The RealReal', isAccent: false },
+  { key: 'rack',      label: 'RACK',      isAccent: true  },
+  { key: 'vendoo',    label: 'Vendoo',    isAccent: false },
+  { key: 'crosslist', label: 'Crosslist', isAccent: false },
 ];
 
 export default function ComparisonSection() {
@@ -91,7 +101,7 @@ export default function ComparisonSection() {
             maxWidth: '440px',
           }}
         >
-          Everything the old<br />platforms left out.
+          They can price it.<br />None of them can shoot it.
         </h2>
 
         {/* Table */}
@@ -199,6 +209,22 @@ export default function ComparisonSection() {
             </div>
           ))}
         </div>
+
+        {/* Honest footing: name the category, and say where the claim comes from. */}
+        <p
+          style={{
+            marginTop: '28px',
+            fontSize: '13px',
+            fontFamily: 'Manrope, sans-serif',
+            color: MUTED,
+            lineHeight: 1.6,
+            maxWidth: '620px',
+          }}
+        >
+          Compared against reseller listing tools, not marketplaces — Rack doesn&rsquo;t replace where
+          you sell, it replaces the two hours of work before you sell. The photograph is the part
+          none of them touch, and it is the part that decides what you get offered.
+        </p>
       </div>
     </section>
   );

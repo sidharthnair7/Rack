@@ -55,7 +55,7 @@ function DotGrid() {
   );
 }
 
-export default function ProcessingLoader() {
+export default function ProcessingLoader({ progress }) {
   const textRef     = useRef(null);
   const progressRef = useRef(null);
   const wrapRef     = useRef(null);
@@ -77,11 +77,24 @@ export default function ProcessingLoader() {
       });
     }, 2200);
 
-    // Progress bar — ink fill, no gradient
-    gsap.to(progressRef.current, { width: '100%', duration: 11, ease: 'power1.inOut' });
-
     return () => clearInterval(interval);
   }, []);
+
+  // The bar tracks real completions rather than a fixed 11s animation. A batch hits four
+  // vendors per item on a scheduler, so a timed bar would sit at 100%% while work continued —
+  // which reads as "finished but frozen" precisely when the user is deciding whether to trust it.
+  const done  = progress?.done ?? 0;
+  const total = progress?.total ?? 0;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  useEffect(() => {
+    if (!progressRef.current) return;
+    gsap.to(progressRef.current, {
+      width: total > 0 ? pct + '%%' : '15%%',
+      duration: 0.6,
+      ease: 'power2.out',
+    });
+  }, [pct, total]);
 
   return (
     <div
@@ -116,6 +129,15 @@ export default function ProcessingLoader() {
           style={{ width: '0%', height: '100%', background: '#0d0d0d' }}
         />
       </div>
+
+      {total > 0 && (
+        <p style={{
+          marginTop: '16px', fontSize: '12px', fontFamily: 'Manrope, sans-serif',
+          letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9a9796',
+        }}>
+          {done} of {total} {total === 1 ? 'piece' : 'pieces'} done
+        </p>
+      )}
     </div>
   );
 }

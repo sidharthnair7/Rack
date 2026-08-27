@@ -78,7 +78,7 @@ export default function LandingPage({ onStart, onSignUp }) {
             margin: '0 auto 40px',
           }}
         >
-          Photograph the pile. RACK identifies each piece, prices it from real sold listings, shoots it on a model, and publishes your storefront — in about four minutes.
+          Photograph the pile. RACK identifies each piece, prices it from real listings you can click and check, shoots it on a model, and publishes your storefront — in about four minutes.
         </p>
 
         {/* CTAs — magnetic hover */}

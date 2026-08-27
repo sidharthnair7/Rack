@@ -2,10 +2,14 @@ import useScrollReveal from '../hooks/useScrollReveal';
 
 const INK   = 'var(--color-ink)';
 
+// Wording tracks what the product actually does today. "Sold comps" was accurate until eBay
+// moved completed sales behind a login in July 2026; the pipeline now prices from live
+// comparable listings, and every one of them is clickable. "Studio" came out with the
+// ai-studio stage, whose templates turned out to be themed portrait scenes.
 const STEPS = [
   { num: '01', label: 'IDENTIFY',   title: 'Snap the pile' },
-  { num: '02', label: 'PRICE',      title: 'Real sold comps' },
-  { num: '03', label: 'PHOTOGRAPH', title: 'Studio + on-model' },
+  { num: '02', label: 'PRICE',      title: 'Comps you can click' },
+  { num: '03', label: 'PHOTOGRAPH', title: 'Cut out, relit, worn' },
   { num: '04', label: 'PUBLISH',    title: 'Live on your domain' },
 ];
 

@@ -9,7 +9,7 @@ const CREAM = 'var(--color-cream)';
 const HAIR  = 'var(--color-hairline)';
 const ACCENT = 'var(--color-accent)';
 
-export default function UploadSection({ onUpload }) {
+export default function UploadSection({ onUpload, error }) {
   const [isDragging, setIsDragging]   = useState(false);
   const [file, setFile]               = useState(null);
   const [cameraOpen, setCameraOpen]   = useState(false);
@@ -51,10 +51,17 @@ export default function UploadSection({ onUpload }) {
   // ── drag/drop helpers ───────────────────────────────────────────────────
   const handleDragOver  = (e) => { e.preventDefault(); if (!isDragging) { setIsDragging(true);  gsap.to(containerRef.current, { scale: 1.02, duration: 0.3, ease: 'power2.out' }); } };
   const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); gsap.to(containerRef.current, { scale: 1, duration: 0.3, ease: 'power2.out' }); };
-  const handleDrop      = (e) => { e.preventDefault(); setIsDragging(false); gsap.to(containerRef.current, { scale: 1, duration: 0.3, ease: 'power2.out' }); if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]); };
-  const handleChange    = (e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); };
+  const handleDrop      = (e) => { e.preventDefault(); setIsDragging(false); gsap.to(containerRef.current, { scale: 1, duration: 0.3, ease: 'power2.out' }); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files); };
+  const handleChange    = (e) => { if (e.target.files?.length) handleFile(e.target.files); };
 
-  const handleFile = (selectedFile) => { setFile(selectedFile); setTimeout(() => onUpload(selectedFile), 700); };
+  // Accepts one file or many. The preview shows the first; every selected photo is sent, so a
+  // seller can empty a whole closet in one pass and get a single inventory total back.
+  const handleFile = (selected) => {
+    const list = selected instanceof File ? [selected] : Array.from(selected);
+    if (!list.length) return;
+    setFile(list[0]);
+    setTimeout(() => onUpload(list), 700);
+  };
 
   // ── camera helpers ──────────────────────────────────────────────────────
   const openCamera = useCallback(async () => {
@@ -176,7 +183,29 @@ export default function UploadSection({ onUpload }) {
               }
             }}
           >
-            <input id="file-upload-rack" type="file" accept="image/*" className="hidden" onChange={handleChange} />
+      
+      {error && (
+        <p
+          role="alert"
+          style={{
+            margin: '0 auto 20px',
+            maxWidth: '480px',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            background: 'rgba(138,90,43,0.08)',
+            color: '#8a5a2b',
+            fontFamily: 'Manrope, sans-serif',
+            fontSize: '13px',
+            lineHeight: 1.5,
+            textAlign: 'center',
+          }}
+        >
+          Couldn&rsquo;t reach the Rack server. Make sure the backend is running on port 8080, then try again.
+          <br />
+          <span style={{ opacity: 0.7, fontSize: '12px' }}>{error}</span>
+        </p>
+      )}
+      <input id="file-upload-rack" type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
             <div ref={iconRef} style={{ marginBottom: '20px' }}>
               {file
                 ? <CheckCircle2 size={40} color={INK} strokeWidth={1.2} />
