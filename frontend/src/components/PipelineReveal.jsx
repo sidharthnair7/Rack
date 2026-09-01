@@ -64,29 +64,58 @@ export default function PipelineReveal() {
   const [activeStage, setActiveStage] = useState(0);
   const [shots, setShots] = useState([]);
 
-  // Pull the most recently published piece and use its real stage images.
+  // Pull a recently published piece and use its real stage images.
+  //
+  // This used to take listings[length - 1] and trust it. Two things broke that. The list is not
+  // ordered newest-last, and rows outlive their files: the database is shared across machines
+  // while images are written to local disk, so an older listing can resolve to URLs that 404.
+  // The landing page then rendered broken image icons on top of the placeholder gradients.
+  //
+  // So: walk candidates newest-first and actually verify the files load before using them.
   useEffect(() => {
     let cancelled = false;
+
+    const loads = async url => {
+      try {
+        const res = await fetch(url, { method: 'HEAD' });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    };
+
     (async () => {
       try {
         const demo = await (await fetch('/api/demo')).json();
         const listings = await (await fetch(`/api/stores/${demo.storeId}/listings`)).json();
         if (!listings.length) return;
-        const latest = listings[listings.length - 1];
-        const images = await (await fetch(`/api/items/${latest.itemId}/images`)).json();
-        const urlFor = kind => {
-          const kinds = Array.isArray(kind) ? kind : [kind];
-          for (const k of kinds) {
-            const hit = images.find(i => i.kind === k && i.url);
-            if (hit) return hit.url;
+
+        const newestFirst = [...listings].sort((a, b) => b.itemId - a.itemId).slice(0, 6);
+
+        for (const listing of newestFirst) {
+          if (cancelled) return;
+          const images = await (await fetch(`/api/items/${listing.itemId}/images`)).json();
+          const urlFor = kind => {
+            const kinds = Array.isArray(kind) ? kind : [kind];
+            for (const k of kinds) {
+              const hit = images.find(i => i.kind === k && i.url);
+              if (hit) return hit.url;
+            }
+            return null;
+          };
+          const resolved = STAGE_KINDS.map(urlFor);
+          if (resolved.some(url => !url)) continue;
+
+          // Every stage falling back to the same file would be one image pretending to be a
+          // progression, which is the thing this section exists to show honestly.
+          if (new Set(resolved).size < 2) continue;
+
+          const checks = await Promise.all(resolved.map(loads));
+          if (checks.every(Boolean)) {
+            if (!cancelled) setShots(resolved);
+            return;
           }
-          return null;
-        };
-        const resolved = STAGE_KINDS.map(urlFor);
-        // Only use them if the pipeline genuinely transformed the photo; if every stage fell back
-        // to the original, the four cards would be the same image pretending to be a progression.
-        const distinct = new Set(resolved.filter(Boolean));
-        if (!cancelled && distinct.size > 1) setShots(resolved);
+        }
       } catch {
         // Landing page must render with the backend down.
       }

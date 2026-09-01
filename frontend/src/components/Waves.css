@@ -9,18 +9,11 @@
   overflow: hidden;
 }
 
-.waves::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 0.5rem;
-  height: 0.5rem;
-  background: #1c1a17;
-  border-radius: 50%;
-  transform: translate3d(calc(var(--x) - 50%), calc(var(--y) - 50%), 0);
-  will-change: transform;
-}
+/* The mouse-tracking dot this file used to draw is gone. It was a second custom cursor, drawn
+   independently of the dot-and-ring component, which is why deleting that one left this one still
+   following the pointer. Same reasoning: a screen recorder composites the real OS cursor into the
+   video, so a stray dot trailing behind it reads as a rendering fault in the demo. The waves
+   themselves still track the pointer; only the visible dot is removed. */
 
 .waves-canvas {
   display: block;
