@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 
 const INK = '#1c1a17';
@@ -33,7 +33,7 @@ function completedStages(items) {
   return Math.min(...live.map(i => Math.max(0, ORDER.indexOf(i.status))));
 }
 
-function StageRow({ stage, state }) {
+function StageRow({ stage, state, seconds }) {
   const dotRef = useRef(null);
 
   useEffect(() => {
@@ -89,6 +89,15 @@ function StageRow({ stage, state }) {
         fontWeight: isActive ? 600 : 400,
       }}>
         {isDone ? stage.done : stage.active}
+        {/* A live second count on the running stage. Try-on takes about eleven seconds, during
+            which nothing else on this screen changes, and a screen that has not changed in ten
+            seconds reads as one that has crashed. This is the real elapsed time, so it is proof
+            the page is alive without inventing progress the backend has not reported. */}
+        {isActive && seconds > 0 && (
+          <span style={{ color: MUTED, fontWeight: 400, marginLeft: '8px', fontVariantNumeric: 'tabular-nums' }}>
+            {seconds}s
+          </span>
+        )}
       </span>
 
       <span style={{
@@ -110,6 +119,14 @@ export default function ProcessingLoader({ progress }) {
   const complete = completedStages(items);
   const activeIndex = Math.min(complete, STAGES.length - 1);
   const heading = STAGES[activeIndex].active;
+
+  // Seconds the current stage has been running, reset whenever the pipeline actually advances.
+  const [stageSeconds, setStageSeconds] = useState(0);
+  useEffect(() => {
+    setStageSeconds(0);
+    const id = setInterval(() => setStageSeconds(s => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [activeIndex]);
 
   useEffect(() => {
     gsap.fromTo(wrapRef.current, { opacity: 0 }, { opacity: 1, duration: 0.4 });
@@ -155,6 +172,7 @@ export default function ProcessingLoader({ progress }) {
               key={stage.key}
               stage={stage}
               state={i < complete ? 'done' : i === complete ? 'active' : 'pending'}
+              seconds={i === complete ? stageSeconds : 0}
             />
           ))}
         </div>
