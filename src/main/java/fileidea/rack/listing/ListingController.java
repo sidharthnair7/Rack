@@ -276,7 +276,7 @@ public class ListingController {
                 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <title>%s</title><style>
-                :root{--ink:#1c1a17;--mute:#77706a;--line:#e2dbd1;--bg:#faf7f2;--card:#fff;--accent:#8a5a2b}
+                :root{--ink:#1c1a17;--mute:#6e6862;--line:#e2dbd1;--bg:#f7f5f3;--card:#fff;--accent:#8a5a2b}
                 *{box-sizing:border-box}
                 body{margin:0;background:var(--bg);color:var(--ink);
                   font:16px/1.6 Georgia,"Times New Roman",serif;-webkit-font-smoothing:antialiased}

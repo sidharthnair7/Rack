@@ -5,21 +5,22 @@
   --font-sans:  "Manrope", sans-serif;
   --font-serif: "Cormorant Garamond", serif;
 
-  /* Dark Theme */
-  --color-cream:    #221618;
-  --color-ink:      #f7f5f3;
-  --color-muted:    #a59699;
-  --color-hairline: rgba(247, 245, 243, 0.12);
+  /* Light ground. Same paper the published storefront is printed on, so the
+     app and the shop it produces read as one product. */
+  --color-cream:    #f7f5f3;
+  --color-ink:      #1c1a17;
+  --color-muted:    #6e6862;
+  --color-hairline: rgba(28, 26, 23, 0.12);
 
-  /* Deep Plum Accent System */
-  --color-accent:      #f7f5f3;
-  --color-accent-tint: rgba(247, 245, 243, 0.04);
+  /* Warm brown accent - the colour every price is already set in downstream */
+  --color-accent:      #8a5a2b;
+  --color-accent-tint: rgba(138, 90, 43, 0.05);
 
   /* Inverted variants for alternating sections */
-  --color-inverted-bg:   #f7f5f3;
-  --color-inverted-text: #0d0d0d;
-  --color-inverted-muted: #9a9796;
-  --color-inverted-hair: rgba(13, 13, 13, 0.12);
+  --color-inverted-bg:   #1c1a17;
+  --color-inverted-text: #f7f5f3;
+  --color-inverted-muted: #a59699;
+  --color-inverted-hair: rgba(247, 245, 243, 0.12);
 
   /* Rose palette for shader / accents */
   --color-rose:      #d4b4bc;
@@ -59,31 +60,15 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Masonry grid (CSS columns approach) ────────────────────────────────── */
-.masonry-grid {
-  column-count: 3;
-  column-gap: 32px;
-}
-
-.masonry-item {
-  break-inside: avoid;
-  margin-bottom: 32px;
-  display: block;
-}
-
-@media (max-width: 1024px) {
-  .masonry-grid { column-count: 2; }
-}
-@media (max-width: 640px) {
-  .masonry-grid { column-count: 1; }
-}
-
-/* ── Scroll-dot animation for CinemaWheel cue ───────────────────────────── */
-@keyframes scrollDot {
-  0%   { transform: translateY(0);   opacity: 1; }
-  60%  { transform: translateY(8px); opacity: 0; }
-  61%  { transform: translateY(0);   opacity: 0; }
-  100% { transform: translateY(0);   opacity: 1; }
+/* ── Hero photo field: continuous slow orbit ─────────────────────────────────
+   One transform on each of three layer wrappers, so the field is composited on
+   the GPU. The scroll-driven version recalculated 74 elements per scroll tick in
+   JS, which is exactly the kind of work that shows up as stutter in a screen
+   recording. Durations live in CinemaWheel; a full turn takes two to four
+   minutes, so it reads as drift rather than a carousel. */
+@keyframes rackOrbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 /* ── Grain shimmer (very subtle) ────────────────────────────────────────── */

@@ -11,7 +11,7 @@ const NAV_LINKS = [
   { label: 'Examples', id: 'examples' },
 ];
 
-export default function Navbar({ onSignIn, onSignUp, onLogoClick, onNavClick }) {
+export default function Navbar({ onStart, onLogoClick, onNavClick }) {
   const ctaMagnetic = useMagneticHover({ strength: 10 });
 
   return (
@@ -34,7 +34,7 @@ export default function Navbar({ onSignIn, onSignUp, onLogoClick, onNavClick }) 
           gap: '8px',
           padding: '8px 20px',
           borderRadius: '9999px',
-          background: 'rgba(34, 22, 24, 0.85)',
+          background: 'rgba(247, 245, 243, 0.82)',
           border: `1px solid ${HAIR}`,
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
@@ -95,37 +95,14 @@ export default function Navbar({ onSignIn, onSignUp, onLogoClick, onNavClick }) 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Auth buttons */}
+        {/* Single CTA. There is deliberately no Log in / Sign up here: Rack has no accounts,
+            and a button that opens a form which does nothing reads as unfinished to anyone who
+            clicks it. One control that actually starts the flow is both honest and clearer. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <button
-            onClick={onSignIn}
-            style={{
-              padding: '7px 16px',
-              background: 'transparent',
-              border: `1px solid ${HAIR}`,
-              borderRadius: '9999px',
-              fontSize: '13px',
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 500,
-              color: MUTED,
-              cursor: 'pointer',
-              transition: 'all 0.3s var(--ease-out-expo)',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = INK;
-              e.currentTarget.style.color = INK;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = HAIR;
-              e.currentTarget.style.color = MUTED;
-            }}
-          >
-            Log in
-          </button>
           <button
             ref={ctaMagnetic.ref}
             {...ctaMagnetic.handlers}
-            onClick={onSignUp}
+            onClick={onStart}
             style={{
               padding: '7px 16px',
               background: INK,
@@ -138,12 +115,8 @@ export default function Navbar({ onSignIn, onSignUp, onLogoClick, onNavClick }) 
               cursor: 'pointer',
               transition: 'opacity 0.3s var(--ease-out-expo)',
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.opacity = '0.85';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.opacity = '1';
-            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
           >
             Start listing
           </button>

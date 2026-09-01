@@ -209,7 +209,13 @@ public class IdentifyService {
             "genuine", "style", "classic", "regular", "slim", "straight", "relaxed", "premium",
             "quality", "brand", "sale", "shop", "buy", "free", "shipping", "condition", "rare",
             "made", "usa", "small", "medium", "large", "xlarge", "colour", "color", "black",
-            "white", "blue", "green", "grey", "gray", "brown", "beige", "navy", "denim"
+            "white", "blue", "green", "grey", "gray", "brown", "beige", "navy", "denim",
+            // Stock-photo boilerplate. A watermarked catalogue image makes "stock", "photo" and
+            // the agency name the most-repeated tokens across visual matches, so the brand comes
+            // back as "Stock" - which then searches eBay for stock photos rather than clothing.
+            "stock", "photo", "photos", "picture", "image", "images", "royalty", "depositphotos",
+            "shutterstock", "istock", "alamy", "getty", "adobe", "dreamstime", "vector",
+            "isolated", "background", "closeup", "close", "top", "view", "flat", "lay", "mockup"
     );
 
     private static final Map<String, String> TYPE_WORDS = Map.ofEntries(

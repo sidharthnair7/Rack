@@ -1,5 +1,3 @@
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
 import CinemaWheel from './CinemaWheel';
 import PipelineReveal from './PipelineReveal';
 import HowItWorksSection from './HowItWorksSection';
@@ -14,23 +12,14 @@ const HAIR       = 'var(--color-hairline)';
 const ACCENT     = 'var(--color-accent)';
 const ACCENT_TINT = 'var(--color-accent-tint)';
 
-export default function LandingPage({ onStart, onSignUp }) {
-  const heroHeadRef = useRef(null);
+export default function LandingPage({ onStart }) {
   const primaryMagnetic = useMagneticHover({ strength: 12 });
   const secondaryMagnetic = useMagneticHover({ strength: 10 });
   const impactReveal = useScrollReveal({ threshold: 0.2, distance: 40 });
 
-  // Hero headline weight animation on mount
-  useEffect(() => {
-    if (!heroHeadRef.current) return;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
-    gsap.fromTo(heroHeadRef.current,
-      { fontWeight: 300, opacity: 0, y: 20 },
-      { fontWeight: 400, opacity: 1, y: 0, duration: 1.2, ease: 'power3.out', delay: 0.3 }
-    );
-  }, []);
+  // The headline used to fade and rise in over 1.5s from opacity 0. It is the first thing anyone
+  // reads and the first frame of the demo video, so it now paints finished: nothing to wait for,
+  // and no state where a stalled tween leaves the most important line on the page invisible.
 
   return (
     <div className="w-full flex flex-col" style={{ backgroundColor: 'transparent' }}>
@@ -48,9 +37,8 @@ export default function LandingPage({ onStart, onSignUp }) {
           zIndex: -1
         }} />
 
-        {/* Headline — oversized, variable weight */}
+        {/* Headline, oversized */}
         <h1
-          ref={heroHeadRef}
           style={{
             fontSize: 'clamp(52px, 8vw, 96px)',
             fontFamily: 'Cormorant Garamond, serif',
@@ -78,7 +66,7 @@ export default function LandingPage({ onStart, onSignUp }) {
             margin: '0 auto 40px',
           }}
         >
-          Photograph the pile. RACK identifies each piece, prices it from real listings you can click and check, shoots it on a model, and publishes your storefront — in about four minutes.
+          Photograph one piece. RACK identifies it, prices it from real listings you can click and check, shoots it on a model, and publishes it to a storefront on your own domain, in about a minute.
         </p>
 
         {/* CTAs — magnetic hover */}
@@ -109,7 +97,10 @@ export default function LandingPage({ onStart, onSignUp }) {
           <button
             ref={secondaryMagnetic.ref}
             {...secondaryMagnetic.handlers}
-            onClick={onSignUp}
+            // "See a real listing" now opens the actual storefront rather than a sign-up modal.
+            // The strongest thing this page can do is let someone click straight through to a
+            // published piece and check the comps for themselves.
+            onClick={() => window.open('/shop/1', '_blank', 'noopener')}
             style={{
               padding: '14px 34px',
               background: 'transparent',
@@ -188,7 +179,7 @@ export default function LandingPage({ onStart, onSignUp }) {
             opacity: 0.6,
           }}
         >
-          identified, priced, and listed from one photo of a bed.
+          identified, priced, and listed one piece at a time.
         </p>
       </div>
 

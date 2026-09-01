@@ -79,7 +79,6 @@ public class ListingService {
 
         item.setStatus(ItemStatus.LISTED);
         items.save(item);
-        reconcile(item.getBatch());
         return listing;
     }
 
@@ -98,6 +97,17 @@ public class ListingService {
                 .toList();
     }
 
+    /**
+     * Best-effort batch roll-up.
+     *
+     * <p>Deliberately NOT called from {@link #publish}. Items publish concurrently on separate
+     * worker threads, and every one of them writing this same Batch row was the only shared
+     * mutable state between those transactions - with a remote Postgres that contention left
+     * items with their listing committed but their status never advancing past IMAGED, so a
+     * multi-item batch never finished. Batch status is cosmetic (the UI tracks item statuses),
+     * which makes it a poor thing to serialise the whole pipeline on.
+     */
+    @SuppressWarnings("unused")
     private void reconcile(Batch batch) {
         if (batch == null || batch.getId() == null) {
             return;

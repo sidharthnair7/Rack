@@ -148,17 +148,16 @@ export default function UploadSection({ onUpload, error }) {
           <div
             ref={(el) => { containerRef.current = el; uploadMagnetic.ref.current = el; }}
             {...uploadMagnetic.handlers}
-            data-cursor="upload"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => document.getElementById('file-upload-rack').click()}
             style={{
               background: isDragging
-                ? 'rgba(247, 245, 243, 0.08)'
-                : 'rgba(247, 245, 243, 0.03)',
+                ? 'rgba(255, 255, 255, 0.80)'
+                : 'rgba(255, 255, 255, 0.58)',
               border: isDragging
-                ? `1.5px solid rgba(247, 245, 243, 0.4)`
+                ? `1.5px solid rgba(28, 26, 23, 0.4)`
                 : `1.5px solid ${HAIR}`,
               borderRadius: '20px',
               padding: '48px 24px',
@@ -172,13 +171,13 @@ export default function UploadSection({ onUpload, error }) {
             }}
             onMouseEnter={e => {
               if (!isDragging) {
-                e.currentTarget.style.background = 'rgba(247, 245, 243, 0.06)';
-                e.currentTarget.style.borderColor = 'rgba(247, 245, 243, 0.25)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.72)';
+                e.currentTarget.style.borderColor = 'rgba(28, 26, 23, 0.25)';
               }
             }}
             onMouseLeave={e => {
               if (!isDragging) {
-                e.currentTarget.style.background = 'rgba(247, 245, 243, 0.03)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.58)';
                 e.currentTarget.style.borderColor = HAIR;
               }
             }}
@@ -231,7 +230,7 @@ export default function UploadSection({ onUpload, error }) {
               textAlign: 'center',
               lineHeight: 1.5,
             }}>
-              {file ? file.name : 'or click to browse — JPG, PNG, WEBP'}
+              {file ? file.name : 'or click to browse. JPG, PNG or WEBP'}
             </p>
           </div>
 
@@ -241,8 +240,8 @@ export default function UploadSection({ onUpload, error }) {
             {...cameraMagnetic.handlers}
             onClick={openCamera}
             style={{
-              background: 'rgba(247, 245, 243, 0.08)',
-              border: `1.5px solid rgba(247, 245, 243, 0.15)`,
+              background: 'rgba(255, 255, 255, 0.65)',
+              border: `1.5px solid rgba(28, 26, 23, 0.15)`,
               borderRadius: '20px',
               padding: '48px 24px',
               display: 'flex',
@@ -252,12 +251,12 @@ export default function UploadSection({ onUpload, error }) {
               transition: 'all 0.4s var(--ease-out-expo)',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(247, 245, 243, 0.12)';
-              e.currentTarget.style.borderColor = 'rgba(247, 245, 243, 0.3)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.80)';
+              e.currentTarget.style.borderColor = 'rgba(28, 26, 23, 0.3)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(247, 245, 243, 0.08)';
-              e.currentTarget.style.borderColor = 'rgba(247, 245, 243, 0.15)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.65)';
+              e.currentTarget.style.borderColor = 'rgba(28, 26, 23, 0.15)';
             }}
           >
             <div style={{ marginBottom: '20px' }}>
@@ -295,7 +294,7 @@ export default function UploadSection({ onUpload, error }) {
         )}
       </div>
 
-      {/* ── Camera overlay (dark plum theme aligned) ────────────────────────── */}
+      {/* ── Camera overlay ────────────────────────── */}
       {cameraOpen && (
         <div
           ref={overlayRef}
@@ -320,13 +319,13 @@ export default function UploadSection({ onUpload, error }) {
             onClick={closeCamera}
             style={{
               position: 'absolute', top: '20px', right: '24px',
-              background: 'rgba(247, 245, 243, 0.1)', border: 'none',
+              background: 'rgba(255, 255, 255, 0.70)', border: 'none',
               borderRadius: '50%', width: '44px', height: '44px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', transition: 'background 0.3s var(--ease-out-expo)',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(247, 245, 243, 0.18)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(247, 245, 243, 0.1)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.88)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.70)'}
           >
             <X size={18} color={INK} strokeWidth={1.5} />
           </button>
@@ -346,7 +345,7 @@ export default function UploadSection({ onUpload, error }) {
           <div style={{
             position: 'relative', borderRadius: '20px', overflow: 'hidden',
             maxWidth: '540px', width: '100%',
-            boxShadow: '0 0 0 1px rgba(247, 245, 243, 0.1), 0 12px 48px rgba(0,0,0,0.3)',
+            boxShadow: '0 0 0 1px rgba(28, 26, 23, 0.1), 0 12px 48px rgba(28,26,23,0.14)',
           }}>
             <video
               ref={videoRef}
@@ -381,11 +380,11 @@ export default function UploadSection({ onUpload, error }) {
               width: '72px', height: '72px',
               borderRadius: '50%',
               background: INK,
-              border: '4px solid rgba(247, 245, 243, 0.15)',
+              border: '4px solid rgba(255, 255, 255, 0.90)',
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'transform 0.3s var(--ease-spring)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+              boxShadow: '0 4px 24px rgba(28,26,23,0.16)',
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -395,7 +394,7 @@ export default function UploadSection({ onUpload, error }) {
             <div style={{
               width: '54px', height: '54px', borderRadius: '50%',
               background: INK,
-              border: '2px solid rgba(247, 245, 243, 0.2)',
+              border: '2px solid rgba(255, 255, 255, 0.25)',
             }} />
           </button>
 

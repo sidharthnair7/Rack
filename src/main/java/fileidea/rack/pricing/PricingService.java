@@ -23,7 +23,10 @@ import fileidea.rack.task.TaskOrchestrator;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class PricingService {
@@ -84,7 +87,7 @@ public class PricingService {
             });
         }
 
-        List<EbayComp> comparables = serpApi.ebayComps(query);
+        List<EbayComp> comparables = distinctListings(serpApi.ebayComps(query));
         List<ShoppingResult> shopping = serpApi.shopping(query);
         String brand = item.displayBrand() == null ? query : item.displayBrand();
         List<Integer> trends = serpApi.trendSeries(brand);
@@ -177,6 +180,48 @@ public class PricingService {
         return comps.findByPriceEstimateId(estimateId);
     }
 
+
+    /**
+     * eBay returns the same listing more than once for a lot of queries: relists, promoted
+     * placements and variation groupings all come back as separate rows pointing at one item.
+     * Left alone that hurts twice. The median double-counts whichever listing repeated, and the
+     * evidence panel shows the same garment two or three times, which makes a price derived from
+     * real listings look padded at exactly the moment it needs to look trustworthy.
+     *
+     * Deduplicating here rather than at render time means the number and the evidence behind it
+     * are computed from the same set of distinct listings.
+     */
+    static List<EbayComp> distinctListings(List<EbayComp> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        Map<String, EbayComp> distinct = new LinkedHashMap<>();
+        for (EbayComp hit : raw) {
+            if (hit != null) {
+                distinct.putIfAbsent(identity(hit), hit);
+            }
+        }
+        return List.copyOf(distinct.values());
+    }
+
+    /**
+     * Prefer the item URL with its query string stripped: eBay appends per-impression tracking
+     * (?hash=, ?epid=, campaign ids) so two rows for one item rarely match as raw strings.
+     * With no URL to key on, title plus price catches the relisted duplicates that differ only
+     * by listing id.
+     */
+    private static String identity(EbayComp hit) {
+        String url = hit.sourceUrl();
+        if (url != null && !url.isBlank()) {
+            int query = url.indexOf('?');
+            return (query >= 0 ? url.substring(0, query) : url)
+                    .trim()
+                    .toLowerCase(Locale.ROOT);
+        }
+        String title = hit.title() == null ? "" : hit.title().trim().toLowerCase(Locale.ROOT);
+        String price = hit.price() == null ? "" : hit.price().stripTrailingZeros().toPlainString();
+        return title + '|' + price;
+    }
 
     /**
      * Joins only the pieces we actually have. Concatenating blanks produced queries like " "

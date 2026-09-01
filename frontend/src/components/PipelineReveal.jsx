@@ -21,24 +21,19 @@ const STAGES = [
     icon: '📱',
   },
   {
-    id: 'removed',
-    label: 'BACKGROUND REMOVED',
-    sublabel: 'Clean isolation in seconds',
-    icon: '✂️',
-  },
-  {
-    id: 'studio',
-    // Named for the relight stage, not the ai-studio one: those templates turned out to be themed
-    // portrait scenes rather than product backdrops, so that stage is off and claiming it here
-    // would describe something the pipeline does not do.
-    label: 'RELIT & SHARPENED',
-    sublabel: 'Bedroom lighting corrected',
-    icon: '💡',
+    // Two stages were removed from this strip because the pipeline no longer runs them, and a
+    // label here has to describe something that actually happens to your photo. Background
+    // removal returned the picture with the bedspread still in it, and relighting raised a black
+    // jacket's mean brightness from 56 to 134, turning it grey on every downstream surface.
+    id: 'sharpened',
+    label: 'SHARPENED',
+    sublabel: 'Detail pulled back out of a phone shot',
+    icon: '✨',
   },
   {
     id: 'model',
     label: 'ON MODEL',
-    sublabel: 'AI-generated editorial image',
+    sublabel: 'Rendered on a synthetic model',
     icon: '👤',
   },
 ];
@@ -46,13 +41,12 @@ const STAGES = [
 // Each reveal stage corresponds to a real ImageKind the backend produces, so this section can
 // show the actual pipeline output instead of standing in for it. Falls back to the gradient when
 // nothing has been published yet — a placeholder is honest, a staged example would not be.
-const STAGE_KINDS = ['ORIGINAL', 'CUTOUT', ['RELIT', 'ENHANCED'], 'ON_MODEL'];
+const STAGE_KINDS = ['ORIGINAL', 'ENHANCED', 'ON_MODEL'];
 
 // Rose-plum gradient cards as placeholders for each stage
 const STAGE_GRADIENTS = [
   'linear-gradient(145deg, #8a6570 0%, #6b4a53 50%, #4a3038 100%)', // raw, phone-quality feel
-  'linear-gradient(145deg, #c9a4b0 0%, #b89099 50%, #a47d88 100%)', // cleaner, isolated
-  'linear-gradient(145deg, #d4b4bc 0%, #c9a4b0 30%, #e8d5db 100%)', // studio-lit brightness
+  'linear-gradient(145deg, #d4b4bc 0%, #c9a4b0 30%, #e8d5db 100%)', // sharpened
   'linear-gradient(145deg, #e8d5db 0%, #d4b4bc 40%, #f0e4e8 100%)', // editorial/model warmth
 ];
 
@@ -275,7 +269,7 @@ export default function PipelineReveal() {
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'linear-gradient(160deg, rgba(255,255,255,0.08) 0%, transparent 60%)',
+                  background: 'linear-gradient(160deg, rgba(28,26,23,0.06) 0%, transparent 60%)',
                   borderRadius: '20px',
                   pointerEvents: 'none',
                 }}

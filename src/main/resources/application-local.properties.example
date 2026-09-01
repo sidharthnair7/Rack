@@ -8,7 +8,7 @@ rack.serpapi.api-key=
 rack.serpapi.cache-only=false
 
 rack.perfectcorp.api-key=
-# A SYNTHETIC model image - generate one with Perfect Corp's AI Avatar Generator.
+# A SYNTHETIC model image - generate one with Perfect Corp's AI Image Generator (text to image).
 # Never a photograph of a real person.
 rack.perfectcorp.model-url=
 

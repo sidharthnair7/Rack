@@ -55,8 +55,13 @@ export async function searchDomains(query) {
  * legitimately takes tens of seconds — this reports progress as it goes rather than sitting on a
  * spinner. It resolves (rather than throwing) on timeout so a slow vendor degrades to partial
  * results instead of losing the whole batch.
+ *
+ * Polled at 1.2s rather than 2.5s because the loading screen now renders the item's real stage:
+ * four stages across ~20s at a 2.5s interval meant a finished stage could sit unacknowledged for
+ * longer than some stages take, which reads as a frozen screen. The extra requests are a handful
+ * of local reads against an already-open batch.
  */
-export async function waitForBatch(batchId, onProgress, { timeoutMs = 240000, intervalMs = 2500 } = {}) {
+export async function waitForBatch(batchId, onProgress, { timeoutMs = 120000, intervalMs = 1200 } = {}) {
   const deadline = Date.now() + timeoutMs;
   let batch = await fetchBatch(batchId);
 

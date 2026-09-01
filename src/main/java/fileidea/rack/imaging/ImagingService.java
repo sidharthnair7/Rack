@@ -112,11 +112,20 @@ public class ImagingService {
 
     private void tryOn(Item item, byte[] garment, String garmentFileId) {
         try {
-            String refId = garmentFileId != null
-                    ? garmentFileId
-                    : perfectCorp.upload("cloth-v4", garment, "garment.jpg");
+            // The garment is uploaded to cloth-v4 directly rather than reusing the file id that
+            // came back from the enhance stage. Chaining a previous stage's dstId works for the
+            // src_file_id of the next editing stage, but cloth-v4 reads ref_file_id as "the
+            // garment to transfer", and handing it an id minted by a different service produced a
+            // render of a plausible generic jacket instead of the jacket that was photographed.
+            // One extra upload per item, and the before/after actually shows the same garment.
+            String refId = perfectCorp.upload("cloth-v4", garment, "garment.jpg");
+            if (!perfectCorpProps.hasOwnModel()) {
+                log.warn("rack.perfectcorp.model-url is not set, so try-on is running against Perfect "
+                        + "Corp's stock sample model. Generate a synthetic model with AI Avatar "
+                        + "Generator and set the URL before publishing or recording.");
+            }
             Map<String, Object> body = new LinkedHashMap<>();
-            body.put("src_file_url", perfectCorpProps.modelUrl());
+            body.put("src_file_url", perfectCorpProps.resolvedModelUrl());
             body.put("ref_file_id", refId);
             body.put("garment_category", garmentCategory(item));
             String taskId = perfectCorp.submit("cloth-v4", body);
@@ -168,7 +177,7 @@ public class ImagingService {
     private TaskResult wait(Item item, ImageKind kind, String service, String taskId) throws InterruptedException {
         ImageAsset pending = save(item, kind, null, TaskStatus.IN_FLIGHT, taskId);
         long deadline = System.currentTimeMillis() + STAGE_TIMEOUT_MS;
-        long backoffMs = 1_500L;
+        long backoffMs = 500L;
         while (System.currentTimeMillis() < deadline) {
             TaskResult result = perfectCorp.poll(service, taskId);
             if (result.success()) {
@@ -183,7 +192,9 @@ public class ImagingService {
                 return null;
             }
             Thread.sleep(Math.min(backoffMs, Math.max(0, deadline - System.currentTimeMillis())));
-            backoffMs = Math.min(backoffMs * 2, 10_000L);
+            // Capped at 2s rather than 4s: four stages each overshooting a finished job by up to
+            // four seconds is most of the wait the user actually feels.
+            backoffMs = Math.min(backoffMs * 2, 2_000L);
         }
         log.warn("{} task {} for item {} timed out after {}ms", service, taskId, item.getId(), STAGE_TIMEOUT_MS);
         pending.setStatus(TaskStatus.ERROR);

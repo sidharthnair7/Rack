@@ -7,7 +7,7 @@ const INK   = 'var(--color-ink)';
 // comparable listings, and every one of them is clickable. "Studio" came out with the
 // ai-studio stage, whose templates turned out to be themed portrait scenes.
 const STEPS = [
-  { num: '01', label: 'IDENTIFY',   title: 'Snap the pile' },
+  { num: '01', label: 'IDENTIFY',   title: 'Snap one piece' },
   { num: '02', label: 'PRICE',      title: 'Comps you can click' },
   { num: '03', label: 'PHOTOGRAPH', title: 'Cut out, relit, worn' },
   { num: '04', label: 'PUBLISH',    title: 'Live on your domain' },
@@ -51,7 +51,7 @@ export default function HowItWorksSection() {
                   fontFamily: 'Manrope, sans-serif',
                   fontWeight: 700,
                   letterSpacing: '0.12em',
-                  color: '#bfa7ad',
+                  color: 'var(--color-accent)',
                   marginBottom: '8px',
                   textTransform: 'uppercase',
                 }}

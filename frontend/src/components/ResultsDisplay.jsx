@@ -2,15 +2,15 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ExternalLink, RotateCcw, ArrowUpRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
-const INK = '#0d0d0d';
-const MUTED = '#9a9796';
+const INK = '#1c1a17';
+const MUTED = '#6e6862';
 const CREAM = '#f7f5f3';
-const HAIR = 'rgba(13,13,13,0.10)';
+const HAIR = 'rgba(28,26,23,0.12)';
 const SERIF = 'Cormorant Garamond, serif';
 const SANS = 'Manrope, sans-serif';
 
 const money = n =>
-  n == null ? '—' : `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  n == null ? '–' : `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 const eyebrow = {
   fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
@@ -36,7 +36,7 @@ function DemandBadge({ demand }) {
 /**
  * One garment: what the phone saw, what Rack produced, what it is worth, and the actual
  * listings that number came from. Every figure and link here comes from the API — a missing
- * value renders as "—" rather than being filled in with something plausible.
+ * value renders as "–" rather than being filled in with something plausible.
  */
 function ItemCard({ item, cardRef }) {
   return (
@@ -165,7 +165,7 @@ function ItemCard({ item, cardRef }) {
                    padding: '11px 18px', borderRadius: '12px', textDecoration: 'none',
                    fontFamily: SANS, fontSize: '14px', fontWeight: 500,
                  }}>
-                Buy — {money(item.price)}
+                Buy for {money(item.price)}
               </a>
             )}
             {item.listingUrl && (
@@ -252,7 +252,7 @@ export default function ResultsDisplay({ data, onReset }) {
       {items.length === 0 ? (
         <p style={{ fontFamily: SANS, color: MUTED, fontSize: '15px', maxWidth: '46ch' }}>
           Nothing could be priced from real comparable listings, so nothing was published.
-          Rack won’t invent a number — try a clearer photo of a single garment.
+          Rack won’t invent a number. Try a clearer photo of a single garment.
         </p>
       ) : (
         items.map((item, i) => (

@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 /**
  * HeroShader — ambient fluid gradient rendered via raw WebGL.
  *
- * Color stops: deep plum (#221618), rose-deep (#3B2228), rose (#d4b4bc).
+ * Color stops: paper (#f7f5f3), warm sand (#efe6e2), rose (#e3cdd2).
  * Slow, silk-like motion. Falls back silently if WebGL unavailable.
  * Respects prefers-reduced-motion (static frame).
  * Resolution capped at 0.5× DPR for performance.
@@ -60,17 +60,17 @@ const FRAGMENT_SRC = `
     n += 0.125 * snoise(uv * 6.0 + vec2(t * 0.6, -t * 0.4));
     n = n * 0.5 + 0.5; // normalize to 0–1
 
-    // Palette: deep plum → rose-deep → rose
-    vec3 colA = vec3(0.133, 0.086, 0.094); // #221618
-    vec3 colB = vec3(0.231, 0.133, 0.157); // #3B2228
-    vec3 colC = vec3(0.831, 0.706, 0.737); // #d4b4bc
+    // Palette: paper → warm sand → rose
+    vec3 colA = vec3(0.969, 0.961, 0.953); // #f7f5f3
+    vec3 colB = vec3(0.937, 0.902, 0.886); // #efe6e2
+    vec3 colC = vec3(0.890, 0.804, 0.824); // #e3cdd2
 
     vec3 color = mix(colA, colB, smoothstep(0.0, 0.5, n));
     color = mix(color, colC, smoothstep(0.5, 1.0, n) * 0.4);
 
     // Subtle radial vignette
     float vignette = 1.0 - smoothstep(0.3, 0.9, length(uv - 0.5) * 1.2);
-    color *= 0.85 + 0.15 * vignette;
+    color *= 0.97 + 0.03 * vignette;
 
     gl_FragColor = vec4(color, 1.0);
   }

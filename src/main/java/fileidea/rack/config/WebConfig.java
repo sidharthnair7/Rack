@@ -17,8 +17,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // Any local port, not a fixed list. Vite moves to 5174, 5175, ... whenever its preferred
+        // port is already taken, and a hardcoded 5173 turns that silent port hop into a
+        // "403 Invalid CORS request" that looks like the backend is down. This only ever matches
+        // loopback origins, and in production the UI is served from this same origin anyway, so
+        // no cross-origin request happens at all.
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:5173", "http://localhost:3000")
+                .allowedOriginPatterns("http://localhost:[*]", "http://127.0.0.1:[*]")
                 .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE")
                 .allowedHeaders("*");
     }

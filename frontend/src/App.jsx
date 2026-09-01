@@ -2,18 +2,14 @@ import { useState } from 'react';
 import { processImage } from './lib/api';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
-import AuthModal from './components/AuthModal';
 import UploadSection from './components/UploadSection';
 import ProcessingLoader from './components/ProcessingLoader';
 import ResultsDisplay from './components/ResultsDisplay';
-import CustomCursor from './components/CustomCursor';
 import Waves from './components/Waves';
 
 export default function App() {
   const [stage, setStage] = useState('landing');
   const [data, setData] = useState(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('signin');
   const [resetKey, setResetKey] = useState(0);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
@@ -56,8 +52,6 @@ export default function App() {
   };
 
   const handleReset = () => { setData(null); setError(null); setProgress(null); setStage('upload'); };
-  const openSignIn  = () => { setAuthMode('signin');  setIsAuthModalOpen(true); };
-  const openSignUp  = () => { setAuthMode('signup');  setIsAuthModalOpen(true); };
 
   return (
       <div
@@ -67,7 +61,7 @@ export default function App() {
         {/* Ambient Waves background */}
         <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
           <Waves
-            lineColor="rgba(212, 180, 188, 0.15)"
+            lineColor="rgba(59, 34, 40, 0.055)"
             backgroundColor="transparent"
             waveSpeedX={0.015}
             waveSpeedY={0.005}
@@ -81,8 +75,11 @@ export default function App() {
           />
         </div>
 
-        {/* Custom cursor (desktop only) */}
-        <CustomCursor />
+        {/* The custom dot-and-ring cursor was removed rather than restyled. It set
+            `body { cursor: none }`, which only hides the pointer the browser draws: a screen
+            recorder composites the operating system's cursor into the video separately, so a
+            recording showed the real arrow and a lagging ring at the same time. Two cursors reads
+            as a rendering bug, in the exact artifact being judged. */}
 
         {/* SVG grain overlay — barely perceptible texture */}
         <div
@@ -91,8 +88,8 @@ export default function App() {
             inset: 0,
             pointerEvents: 'none',
             zIndex: 9999,
-            opacity: 0.035,
-            mixBlendMode: 'overlay',
+            opacity: 0.022,
+            mixBlendMode: 'multiply',
             animation: 'grainShift 8s steps(8) infinite',
           }}
         >
@@ -106,16 +103,11 @@ export default function App() {
         </div>
 
         {/* Navbar — always visible */}
-        <Navbar onSignIn={openSignIn} onSignUp={openSignUp} onLogoClick={handleLogoClick} onNavClick={handleNavClick} />
+        <Navbar onStart={() => setStage('upload')} onLogoClick={handleLogoClick} onNavClick={handleNavClick} />
 
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authMode}
-        />
 
         <main className="flex-1 flex flex-col w-full">
-          {stage === 'landing'    && <LandingPage key={resetKey} onStart={() => setStage('upload')} onSignUp={openSignUp} />}
+          {stage === 'landing'    && <LandingPage key={resetKey} onStart={() => setStage('upload')} />}
           {stage === 'upload'     && <UploadSection onUpload={handleUpload} error={error} />}
           {stage === 'processing' && <ProcessingLoader progress={progress} />}
           {stage === 'results' && data && <ResultsDisplay data={data} onReset={handleReset} />}
