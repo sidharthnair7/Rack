@@ -41,9 +41,10 @@ application-local.properties
 # Working documents for the submission itself, not artifacts of the project. They carry notes
 # written for us rather than for a reader - what to fix before recording, what to say on camera,
 # which forms are worth filing - and this repo is linked publicly from the Devpost entry.
-# README.md, SETUP.md and DEPLOY.md are the docs a visitor should actually find.
+# README.md and SETUP.md are the docs a visitor should actually find.
 DEVPOST.md
 DEMO_SCRIPT.md
+DEPLOY.md
 
 ### Frontend build output ###
 # `npm run build` writes the compiled React app here so `mvn package` bundles it into the jar.

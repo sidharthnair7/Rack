@@ -2,7 +2,7 @@
 
 **Photograph one piece. Get it priced, shot on a model, and listed on your own domain.**
 
-Rack is a listing engine for people who resell secondhand clothing. Photograph a piece on your bed; Rack identifies each piece, prices it from **real comparable listings you can click and verify**, produces catalog-quality photography without a studio or a model, writes the listing, and publishes it to a domain it registers for you — with checkout attached.
+Rack is a listing engine for people who resell secondhand clothing. Photograph one piece on your bed and Rack identifies it, prices it from **real comparable listings you can click and verify**, produces catalog-quality photography without a studio or a model, writes the listing, and publishes it to a storefront with checkout attached, on a domain registered through the name.com API.
 
 Built for the **DevNetwork [API + Cloud + AI] Hackathon 2026**.
 
@@ -37,8 +37,8 @@ The two hardest parts are the two Rack automates:
       └──────┬──────┘
              │
       ┌──────┴──────┐
-      │  PHOTOGRAPH │   Perfect Corp · background removal → relight →
-      └──────┬──────┘   enhance → studio → on-model try-on
+      │  PHOTOGRAPH │   Perfect Corp · enhance → on-model try-on
+      └──────┬──────┘   (model generated with AI Image Generator)
              │
       ┌──────┴──────┐
       │   PUBLISH   │   name.com · search → register → DNS → subdomain
@@ -96,12 +96,12 @@ Everyone uses virtual try-on buyer-side: *see it on you before you buy.* Rack in
 
 | Stage | Service | Purpose |
 |---|---|---|
-| 1 | `sod` | Strip the bedspread |
-| 2 | `lighting` | Fix the room light |
-| 3 | `enhance` | Sharpen and upscale |
-| 4 | `cloth-v4` | Render the garment **worn** |
+| 1 | `enhance` | Sharpen and upscale the phone shot |
+| 2 | `cloth-v4` | Render the garment **worn** on a model |
 
-All four verified working against the live API. `ai-studio` was evaluated and deliberately left out: its templates are themed *portrait* scenes (`female_pink_bunny`, `male_neon_bokeh`), so it stages a person in a styled setting rather than producing a product backdrop. Background removal already gives the clean cutout.
+The model itself is generated with Perfect Corp's **AI Image Generator** (text to image), so no photograph of a real person exists anywhere in the system and one consistent model runs across a seller's whole shop.
+
+**Three stages were evaluated and cut**, each measured against a real garment rather than trusted. `lighting` raised a black bomber's mean brightness from RGB (52,53,62) to (126,133,143), so the jacket came back grey and try-on faithfully rendered the grey jacket it was handed. `sod` returned the photo with the shag rug still in it, identical garment brightness before and after, for 6.7 seconds of a 23.4 second run. `ai-studio` serves themed *portrait* scenes (`female_pink_bunny`, `male_neon_bokeh`), staging a person in a styled setting rather than producing a product backdrop. In a product whose entire claim is that what you see is the piece you photographed, a stage that changes the colour of the item costs more than the lighting it fixes.
 
 Every stage is independently feature-flagged (`rack.imaging.*`) and **fails soft**: if a stage errors or times out, the previous image is kept and the pipeline continues. A batch of eight items where item four's try-on fails still publishes the other seven. See [`ImagingService`](src/main/java/fileidea/rack/imaging/ImagingService.java).
 
@@ -200,7 +200,7 @@ Open http://localhost:8080.
 ./mvnw test
 ```
 
-35 tests, no network required. They pin the exact JSON shapes each vendor returns — including the ones that differ between engines, which is where the real bugs live.
+40 tests, no network required. They pin the exact JSON shapes each vendor returns — including the ones that differ between engines, which is where the real bugs live.
 
 ---
 

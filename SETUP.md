@@ -62,15 +62,17 @@ Until credits land, work against the cache (see §5).
 
 Authentication is a plain bearer token: `Authorization: Bearer YOUR_API_KEY`. No handshake, no token exchange.
 
-These slugs have now been verified against a live account with a real key — all four enabled stages returned genuinely processed images:
+Every slug was exercised against a live account with a real key. All five returned a processed
+image, but returning an image and improving the listing are different things, so each was then
+measured against a real garment and only two survived:
 
 | Config stage | Slug | Status |
 |---|---|---|
-| Background removal | `sod` | verified working |
-| Relight | `lighting` | verified working |
-| Enhance | `enhance` | verified working |
-| Clothes try-on | `cloth-v4` | verified working |
-| Studio background | `ai-studio` | **off by default** — themed portrait templates, not a product backdrop |
+| Enhance | `enhance` | **on** — sharpens and upscales the phone shot |
+| Clothes try-on | `cloth-v4` | **on** — renders the garment worn on a model |
+| Relight | `lighting` | **off** — raised a black jacket's mean brightness from RGB (52,53,62) to (126,133,143), turning it grey on every downstream surface |
+| Background removal | `sod` | **off** — returned the photo with the shag rug still in it, identical garment brightness, for 6.7s of a 23.4s run |
+| Studio background | `ai-studio` | **off** — themed portrait templates, not a product backdrop |
 
 Also confirm the accepted values for `garment_category` on the try-on service. Rack sends `upper_body`, `lower_body`, or `full_body`; an unrecognised value causes the stage to fail soft and fall back to the catalog image.
 
