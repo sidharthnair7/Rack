@@ -4,6 +4,8 @@
 
 Rack is a listing engine for people who resell secondhand clothing. Photograph one piece on your bed and Rack identifies it, prices it from **real comparable listings you can click and verify**, produces catalog-quality photography without a studio or a model, writes the listing, and publishes it to a storefront with checkout attached, on a domain registered through the name.com API.
 
+**Live:** http://15.157.179.11
+
 Built for the **DevNetwork [API + Cloud + AI] Hackathon 2026**.
 
 ---
