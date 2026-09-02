@@ -14,29 +14,25 @@ const HAIR       = 'var(--color-hairline)';
 
 // Rack competes with reseller *listing tools*, not with marketplaces. Comparing it to Poshmark
 // or The RealReal invites the wrong question ("why would I use this instead of somewhere with
-// buyers?"), because Rack does not replace where you sell — it replaces the two hours of work
-// before you sell. Vendoo is the most widely used crosslister; Crosslist is the closest on
-// features and is the only one of the three that already does background removal.
+// buyers?"), because Rack does not replace where you sell, it replaces the work before you sell.
 //
-// The Crosslist tick on background removal is deliberate and load-bearing: a table where the
-// competition scores zero on everything reads as a strawman, and a judge who spots one
-// overstatement stops believing the rest of the page.
-// Checked against Crosslist's own published feature list: they ship background removal, a photo
-// editor, hi-res photo hosting and cross-posting to 11+ marketplaces - and no pricing feature at
-// all. Vendoo is the volume crosslister.
+// This table was rebuilt after checking both competitors' published feature lists, because the
+// previous version was wrong in both directions and that is the more damaging kind of wrong.
+// It denied Vendoo a background remover it has shipped for years, PhotoRoom-powered and metered
+// per plan, and Crosslist ships unlimited background removal plus AI-assisted pricing. All three
+// of us remove backgrounds; that row is a tie, not a win.
 //
-// The last row is deliberately a loss for Rack. A table where the competition scores zero reads
-// as a strawman, and a judge who catches one overstatement stops trusting the whole page. Naming
-// what they genuinely do better is what makes the rows above it credible - and it sets up the
-// real position: Rack doesn't replace where you sell, it replaces the work before you sell.
+// Rack loses one row outright and ties two more, and that is the point. A table where the competition scores
+// zero reads as a strawman, and a judge who catches one overstatement stops believing the whole
+// page. What survives is the part that is actually unique: the price links to the listing it came
+// from, the garment gets rendered worn on a model, and the seller ends up owning the shop.
 const ROWS = [
-  { feature: 'Identifies the garment from a photo',   rack: true,  vendoo: false, crosslist: false },
-  { feature: 'Prices it from comparable listings',    rack: true,  vendoo: false, crosslist: false },
-  { feature: 'Every price links to its source',       rack: true,  vendoo: false, crosslist: false },
-  { feature: 'Removes the background',                rack: true,  vendoo: false, crosslist: true  },
-  { feature: 'Renders it worn on a model',            rack: true,  vendoo: false, crosslist: false },
-  { feature: 'Your own storefront and checkout',      rack: true,  vendoo: false, crosslist: false },
-  { feature: 'Cross-posts to 11+ marketplaces',       rack: false, vendoo: true,  crosslist: true  },
+  { feature: 'Prices it from comparable listings',       rack: true,  vendoo: false, crosslist: true  },
+  { feature: 'Every price links to the listing it came from', rack: true,  vendoo: false, crosslist: false },
+  { feature: 'Removes the background',                   rack: true,  vendoo: true,  crosslist: true  },
+  { feature: 'Renders the garment worn on a model',      rack: true,  vendoo: false, crosslist: false },
+  { feature: 'Your own storefront with checkout',        rack: true,  vendoo: false, crosslist: false },
+  { feature: 'Cross-posts to 11+ marketplaces',          rack: false, vendoo: true,  crosslist: true  },
 ];
 
 const COLS = [
@@ -230,10 +226,11 @@ export default function ComparisonSection() {
             maxWidth: '620px',
           }}
         >
-          Compared against reseller listing tools, not marketplaces. The last row is theirs,
-          not ours. Rack doesn&rsquo;t replace where you sell; it replaces the two hours of work
-          before you sell. They move a listing you already made. Rack makes the listing: the price
-          you can check, and the photograph none of them can take.
+          Compared against reseller listing tools, not marketplaces, and checked against their
+          published feature lists. Three of these rows go to them: both remove backgrounds, both
+          cross-post, and we do neither. Rack doesn&rsquo;t replace where you sell; it replaces the
+          work before you sell. They move a listing you already made. Rack makes the listing: a
+          price you can click through to its source, and the photograph none of them can take.
         </p>
       </div>
     </section>

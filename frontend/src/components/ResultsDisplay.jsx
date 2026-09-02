@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ExternalLink, RotateCcw, ArrowUpRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import DomainClaim from './DomainClaim';
+import { correctBrand } from '../lib/api';
 
 const INK = '#1c1a17';
 const MUTED = '#6e6862';
@@ -38,7 +40,75 @@ function DemandBadge({ demand }) {
  * listings that number came from. Every figure and link here comes from the API — a missing
  * value renders as "–" rather than being filled in with something plausible.
  */
-function ItemCard({ item, cardRef }) {
+/**
+ * The brand, editable in place.
+ *
+ * Google Lens returns a knowledge_graph only for catalogued products, so a secondhand garment on a
+ * bed is routinely identified as the wrong brand or none at all. The backend already exposed
+ * PATCH /api/items/{id}/brand, which re-runs pricing and the listing copy from a corrected brand;
+ * nothing in the product could reach it, so the correction path existed only in the API. Clicking
+ * the line here edits it and everything downstream recomputes.
+ */
+function BrandLine({ item, onCorrected }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(item.brand || '');
+  const [busy, setBusy] = useState(false);
+
+  const label = [item.brand, item.type].filter(Boolean).join(' · ') || 'Identified';
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const next = value.trim();
+    if (!next || busy || next === item.brand) { setEditing(false); return; }
+    setBusy(true);
+    try {
+      await correctBrand(item.itemId, next);
+      if (onCorrected) onCorrected();
+    } catch {
+      // Leave the field open so the correction is not silently lost.
+    } finally {
+      setBusy(false);
+      setEditing(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => { setValue(item.brand || ''); setEditing(true); }}
+        title="Wrong brand? Click to correct it and re-price."
+        style={{
+          ...eyebrow, background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+          textAlign: 'left', borderBottom: '1px dashed rgba(28,26,23,0.28)',
+        }}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={submit}
+        disabled={busy}
+        style={{
+          fontFamily: SANS, fontSize: '12px', letterSpacing: '0.06em', textTransform: 'uppercase',
+          color: INK, padding: '4px 8px', borderRadius: '6px', border: '1px solid ' + HAIR,
+          outline: 'none', width: '160px',
+        }}
+      />
+      <span style={{ fontSize: '11px', color: MUTED, fontFamily: SANS }}>
+        {busy ? 're-pricing' : 'enter to save'}
+      </span>
+    </form>
+  );
+}
+
+function ItemCard({ item, cardRef, onCorrected }) {
   return (
     <article
       ref={cardRef}
@@ -87,7 +157,7 @@ function ItemCard({ item, cardRef }) {
 
         {/* Price + evidence */}
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
-          <p style={{ ...eyebrow }}>{[item.brand, item.type].filter(Boolean).join(' · ') || 'Identified'}</p>
+          <BrandLine item={item} onCorrected={onCorrected} />
           <h3 style={{
             fontFamily: SERIF, fontSize: '26px', fontWeight: 350, fontStyle: 'italic',
             letterSpacing: '-0.03em', color: INK, margin: '6px 0 10px', lineHeight: 1.15,
@@ -186,7 +256,7 @@ function ItemCard({ item, cardRef }) {
   );
 }
 
-export default function ResultsDisplay({ data, onReset }) {
+export default function ResultsDisplay({ data, onReset, onCorrected }) {
   const wrapRef = useRef(null);
   const cardsRef = useRef([]);
 
@@ -249,6 +319,10 @@ export default function ResultsDisplay({ data, onReset }) {
         </div>
       </div>
 
+      {data?.storeId && (
+        <DomainClaim storeId={data.storeId} />
+      )}
+
       {items.length === 0 ? (
         <p style={{ fontFamily: SANS, color: MUTED, fontSize: '15px', maxWidth: '46ch' }}>
           Nothing could be priced from real comparable listings, so nothing was published.
@@ -256,7 +330,8 @@ export default function ResultsDisplay({ data, onReset }) {
         </p>
       ) : (
         items.map((item, i) => (
-          <ItemCard key={item.itemId} item={item} cardRef={el => { cardsRef.current[i] = el; }} />
+          <ItemCard key={item.itemId} item={item} cardRef={el => { cardsRef.current[i] = el; }}
+                    onCorrected={onCorrected} />
         ))
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { processImage } from './lib/api';
+import { processImage, fetchItemDetail } from './lib/api';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import UploadSection from './components/UploadSection';
@@ -110,7 +110,40 @@ export default function App() {
           {stage === 'landing'    && <LandingPage key={resetKey} onStart={() => setStage('upload')} />}
           {stage === 'upload'     && <UploadSection onUpload={handleUpload} error={error} />}
           {stage === 'processing' && <ProcessingLoader progress={progress} />}
-          {stage === 'results' && data && <ResultsDisplay data={data} onReset={handleReset} />}
+          {stage === 'results' && data && (
+            <ResultsDisplay
+              data={data}
+              onReset={handleReset}
+              // A corrected brand re-runs pricing and the listing copy on the server, so the
+              // card has to be refetched rather than patched locally: the price, the range and
+              // the comps all change with it.
+              onCorrected={async () => {
+                try {
+                  const refreshed = await Promise.all(
+                    data.items.map(i => fetchItemDetail(i.itemId).catch(() => null))
+                  );
+                  setData(d => ({
+                    ...d,
+                    items: d.items.map((card, idx) => {
+                      const detail = refreshed[idx];
+                      if (!detail) return card;
+                      return {
+                        ...card,
+                        brand: detail.item.displayBrand,
+                        type: detail.item.identifiedType,
+                        title: detail.listing?.title ?? card.title,
+                        price: detail.price?.suggested ?? card.price,
+                        rangeLow: detail.price?.rangeLow ?? null,
+                        rangeHigh: detail.price?.rangeHigh ?? null,
+                        compCount: detail.price?.compCount ?? 0,
+                        comps: (detail.price?.comps ?? []).slice(0, 6),
+                      };
+                    }),
+                  }));
+                } catch { /* keep what is on screen rather than blanking it */ }
+              }}
+            />
+          )}
         </main>
 
         {/* Footer */}

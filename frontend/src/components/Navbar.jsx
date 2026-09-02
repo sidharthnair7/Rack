@@ -1,4 +1,3 @@
-import useMagneticHover from '../hooks/useMagneticHover';
 
 const INK   = 'var(--color-ink)';
 const CREAM = 'var(--color-cream)';
@@ -12,7 +11,10 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar({ onStart, onLogoClick, onNavClick }) {
-  const ctaMagnetic = useMagneticHover({ strength: 10 });
+  // No magnetic hover on this button. The effect pulls an element up to 10px toward the
+  // cursor, which is fine in open space but this button sits inside a pill with 20px of
+  // padding, so the pull pushed it visibly toward the edge and read as a broken layout.
+  // The cursor crosses the navbar constantly, so it misfired constantly.
 
   return (
     <div
@@ -100,8 +102,6 @@ export default function Navbar({ onStart, onLogoClick, onNavClick }) {
             clicks it. One control that actually starts the flow is both honest and clearer. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <button
-            ref={ctaMagnetic.ref}
-            {...ctaMagnetic.handlers}
             onClick={onStart}
             style={{
               padding: '7px 16px',

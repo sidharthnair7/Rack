@@ -1,8 +1,8 @@
 /**
  * PipelineReveal — Scroll-driven garment processing reveal.
  *
- * As the user scrolls, a single garment image progresses through 4 stages:
- * PHONE PHOTO → BACKGROUND REMOVED → STUDIO LIT → ON MODEL
+ * As the user scrolls, a single garment image progresses through the three stages the pipeline
+ * actually runs: PHONE PHOTO -> SHARPENED -> ON MODEL
  *
  * Pinned via GSAP ScrollTrigger. This is the site's signature moment.
  */
@@ -18,35 +18,45 @@ const STAGES = [
     id: 'phone',
     label: 'PHONE PHOTO',
     sublabel: 'Your camera roll snap',
-    icon: '📱',
+    icon: '\u{1F4F1}',
   },
   {
-    // Two stages were removed from this strip because the pipeline no longer runs them, and a
-    // label here has to describe something that actually happens to your photo. Background
-    // removal returned the picture with the bedspread still in it, and relighting raised a black
-    // jacket's mean brightness from 56 to 134, turning it grey on every downstream surface.
-    id: 'sharpened',
-    label: 'SHARPENED',
-    sublabel: 'Detail pulled back out of a phone shot',
-    icon: '✨',
+    id: 'cutout',
+    label: 'BACKGROUND REMOVED',
+    sublabel: 'The bedspread, gone',
+    icon: '\u2702',
   },
   {
     id: 'model',
     label: 'ON MODEL',
     sublabel: 'Rendered on a synthetic model',
-    icon: '👤',
+    icon: '\u{1F464}',
   },
 ];
 
 // Each reveal stage corresponds to a real ImageKind the backend produces, so this section can
 // show the actual pipeline output instead of standing in for it. Falls back to the gradient when
 // nothing has been published yet — a placeholder is honest, a staged example would not be.
-const STAGE_KINDS = ['ORIGINAL', 'ENHANCED', 'ON_MODEL'];
+const STAGE_KINDS = ['ORIGINAL', 'CUTOUT', 'ON_MODEL'];
 
-// Rose-plum gradient cards as placeholders for each stage
+// Real output from a real run, shipped as static assets.
+//
+// This section used to render only whatever the newest listing happened to have, which meant the
+// signature moment of the landing page depended on the database having content: clear the store,
+// or lose the image files, and a visitor got emoji placeholders where the transformation should
+// be. These three files are genuine pipeline output from an actual garment (phone photo, the
+// sharpened frame, and the try-on render), so the page always shows something true. Live data
+// still wins when a listing exists; this is the floor, not a substitute.
+const FALLBACK_SHOTS = [
+  '/pipeline-1-original.jpg',
+  '/pipeline-2-cutout.jpg',
+  '/pipeline-3-onmodel.jpg',
+];
+
+// Rose-plum gradient cards, now only reached if even the bundled files fail to load
 const STAGE_GRADIENTS = [
   'linear-gradient(145deg, #8a6570 0%, #6b4a53 50%, #4a3038 100%)', // raw, phone-quality feel
-  'linear-gradient(145deg, #d4b4bc 0%, #c9a4b0 30%, #e8d5db 100%)', // sharpened
+  'linear-gradient(145deg, #d4b4bc 0%, #c9a4b0 30%, #e8d5db 100%)', // isolated
   'linear-gradient(145deg, #e8d5db 0%, #d4b4bc 40%, #f0e4e8 100%)', // editorial/model warmth
 ];
 
@@ -62,7 +72,7 @@ export default function PipelineReveal() {
   const sublabelRef = useRef(null);
   const progressDotsRef = useRef([]);
   const [activeStage, setActiveStage] = useState(0);
-  const [shots, setShots] = useState([]);
+  const [shots, setShots] = useState(FALLBACK_SHOTS);
 
   // Pull a recently published piece and use its real stage images.
   //

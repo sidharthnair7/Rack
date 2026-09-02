@@ -20,6 +20,12 @@ import fileidea.rack.integration.storage.ImageStorage;
 import fileidea.rack.task.TaskEndpoints;
 import fileidea.rack.task.TaskOrchestrator;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -202,8 +208,46 @@ public class ImagingService {
         return null;
     }
 
+    /**
+     * Flattens a transparent result onto white before it is stored.
+     *
+     * Background removal returns a PNG with an alpha channel, and every byte of the original
+     * background is still sitting in the RGB channels underneath that mask. Writing those bytes
+     * straight to a .jpg produced a file that looked untouched: the transparency was discarded and
+     * the bedspread came back. It cost us the stage, because measuring the saved file showed the
+     * garment unchanged and the obvious conclusion was that the API had done nothing.
+     *
+     * Compositing here means the pixels the mask marked as background are actually gone, and the
+     * catalog image is the garment on white rather than the garment on a rug. Anything without an
+     * alpha channel passes through untouched.
+     */
+    private static byte[] flattenOntoWhite(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return bytes;
+        }
+        try {
+            BufferedImage src = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (src == null || !src.getColorModel().hasAlpha()) {
+                return bytes;
+            }
+            BufferedImage flat = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = flat.createGraphics();
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, flat.getWidth(), flat.getHeight());
+            g.drawImage(src, 0, 0, null);
+            g.dispose();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(flat, "jpg", out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            // A stage that cannot be flattened is still better than no stage: keep the original.
+            log.warn("could not flatten transparency, storing the response as-is: {}", e.getMessage());
+            return bytes;
+        }
+    }
+
     private byte[] persistDownload(Item item, ImageKind kind, String url, String taskId) {
-        byte[] bytes = perfectCorp.download(url);
+        byte[] bytes = flattenOntoWhite(perfectCorp.download(url));
         String stored = storage.store(
                 "items/" + item.getId() + "/" + kind.name().toLowerCase() + ".jpg",
                 bytes,

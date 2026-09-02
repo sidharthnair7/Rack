@@ -115,7 +115,7 @@ public class ListingController {
                 </header>
                 <p class="proof">Every price here is the median of real comparable listings on eBay. Open any piece to see them.</p>
                 <div class="grid">%s</div>
-                <footer>Listed with <strong>Rack</strong> &middot; photographed, priced, and published from one photo.</footer>
+                <footer>Listed with <a href="/"><strong>Rack</strong></a> &middot; photographed, priced, and published from one photo.</footer>
                 """.formatted(
                 esc(store.getName()),
                 subtitle,
@@ -148,7 +148,7 @@ public class ListingController {
                     %s
                   </div>
                 </div>
-                <footer>Listed with <strong>Rack</strong></footer>
+                <footer>Listed with <a href="/"><strong>Rack</strong></a></footer>
                 """.formatted(
                 storeId,
                 esc(store.getName()),

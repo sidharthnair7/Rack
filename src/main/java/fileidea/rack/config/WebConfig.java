@@ -23,7 +23,8 @@ public class WebConfig implements WebMvcConfigurer {
         // loopback origins, and in production the UI is served from this same origin anyway, so
         // no cross-origin request happens at all.
         registry.addMapping("/api/**")
-                .allowedOriginPatterns("http://localhost:[*]", "http://127.0.0.1:[*]")
+                .allowedOriginPatterns("http://localhost:[*]", "http://127.0.0.1:[*]",
+                                       "https://rackai.store", "https://www.rackai.store")
                 .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE")
                 .allowedHeaders("*");
     }

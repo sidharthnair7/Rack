@@ -42,6 +42,14 @@ export async function correctBrand(itemId, brand) {
   }));
 }
 
+/** Runs the full name.com registration: availability, register, A record, subdomain, forwarding. */
+export async function registerDomain(storeId, domain) {
+  return json(await fetch(
+    `/api/domains/register?storeId=${storeId}&domain=${encodeURIComponent(domain)}`,
+    { method: 'POST' }
+  ));
+}
+
 export async function searchDomains(query) {
   return json(await fetch(`/api/domains/search?query=${encodeURIComponent(query)}`, {
     method: 'POST',

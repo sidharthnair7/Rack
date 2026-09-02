@@ -98,12 +98,15 @@ Everyone uses virtual try-on buyer-side: *see it on you before you buy.* Rack in
 
 | Stage | Service | Purpose |
 |---|---|---|
-| 1 | `enhance` | Sharpen and upscale the phone shot |
-| 2 | `cloth-v4` | Render the garment **worn** on a model |
+| 1 | `sod` | Lift the garment off the bedspread |
+| 2 | `enhance` | Sharpen and upscale |
+| 3 | `cloth-v4` | Render the garment **worn** on a model |
 
 The model itself is generated with Perfect Corp's **AI Image Generator** (text to image), so no photograph of a real person exists anywhere in the system and one consistent model runs across a seller's whole shop.
 
-**Three stages were evaluated and cut**, each measured against a real garment rather than trusted. `lighting` raised a black bomber's mean brightness from RGB (52,53,62) to (126,133,143), so the jacket came back grey and try-on faithfully rendered the grey jacket it was handed. `sod` returned the photo with the shag rug still in it, identical garment brightness before and after, for 6.7 seconds of a 23.4 second run. `ai-studio` serves themed *portrait* scenes (`female_pink_bunny`, `male_neon_bokeh`), staging a person in a styled setting rather than producing a product backdrop. In a product whose entire claim is that what you see is the piece you photographed, a stage that changes the colour of the item costs more than the lighting it fixes.
+**Two stages were evaluated and cut.** `lighting` raised a black bomber's mean brightness from RGB (52,53,62) to (126,133,143), so the jacket came back grey and try-on faithfully rendered the grey jacket it was handed. `ai-studio` serves themed *portrait* scenes (`female_pink_bunny`, `male_neon_bokeh`), staging a person in a styled setting rather than producing a product backdrop.
+
+`sod` was nearly cut for the same reason and shouldn't have been. It returns a PNG whose alpha marks the background while the original pixels stay in the RGB channels underneath; writing those bytes to a `.jpg` dropped the mask and the rug came back, so the stored file measured identical to the input. The API was correct and the save was wrong. `ImagingService` composites onto white before storing now.
 
 Every stage is independently feature-flagged (`rack.imaging.*`) and **fails soft**: if a stage errors or times out, the previous image is kept and the pipeline continues. A batch of eight items where item four's try-on fails still publishes the other seven. See [`ImagingService`](src/main/java/fileidea/rack/imaging/ImagingService.java).
 
