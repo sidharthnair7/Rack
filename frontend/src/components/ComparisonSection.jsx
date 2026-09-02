@@ -231,10 +231,12 @@ export default function ComparisonSection() {
           }}
         >
           Compared against reseller listing tools, not marketplaces, and checked against their
-          published feature lists. Three of these rows go to them: both remove backgrounds, both
-          cross-post, and we do neither. Rack doesn&rsquo;t replace where you sell; it replaces the
-          work before you sell. They move a listing you already made. Rack makes the listing: a
-          price you can click through to its source, and the photograph none of them can take.
+          published feature lists. They win the row that matters to them: both cross-post to a
+          dozen marketplaces and Rack does not. All three of us remove backgrounds, and Crosslist
+          prices from comps too. Rack doesn&rsquo;t replace where you sell, it replaces the work
+          before you sell. They move a listing you already made. Rack makes the listing: several
+          garments out of one photograph, a price you can click through to its source, and the
+          photograph none of them can take.
         </p>
       </div>
     </section>

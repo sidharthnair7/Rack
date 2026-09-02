@@ -105,7 +105,14 @@ public class ListingController {
                 : listings.size() + (listings.size() == 1 ? " piece" : " pieces")
                         + " &middot; " + money(total) + " of inventory";
 
+        // A way back, at the top, where someone looks for one.
+        //
+        // The only route home used to be the word "Rack" in the footer, below every card on the
+        // page. A visitor who arrives here from the site's own navigation and wants to go back has
+        // to scroll past the whole shop to find it, which reads as a dead end rather than a page.
+        // An individual listing already has a back link; the shop it belongs to needs one too.
         String body = """
+                <p class="back"><a href="/">&larr; Rack</a></p>
                 <header class="masthead">
                   <div>
                     <h1>%s</h1>

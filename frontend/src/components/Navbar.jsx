@@ -4,10 +4,18 @@ const CREAM = 'var(--color-cream)';
 const MUTED = 'var(--color-muted)';
 const HAIR  = 'var(--color-hairline)';
 
+// Each label has to describe what the reader actually lands on.
+//
+// "Pricing data" scrolled to the competitor comparison, whose own heading reads "Why Rack" - the
+// link promised data about pricing and delivered a feature table. "Examples" scrolled to the
+// single line stating the shop's inventory total, which is a number, not examples. A nav that
+// misdescribes its own page is a small thing that quietly tells a reader not to trust the rest of
+// it, so: the comparison is named for what it is, and Examples now opens the real storefront,
+// where the actual published listings are.
 const NAV_LINKS = [
   { label: 'How it works', id: 'how-it-works' },
-  { label: 'Pricing data', id: 'pricing-data' },
-  { label: 'Examples', id: 'examples' },
+  { label: 'Why Rack', id: 'pricing-data' },
+  { label: 'Examples', href: '/shop/1' },
 ];
 
 export default function Navbar({ onStart, onLogoClick, onNavClick }) {
@@ -72,9 +80,11 @@ export default function Navbar({ onStart, onLogoClick, onNavClick }) {
         <div style={{ display: 'flex', gap: '24px', marginLeft: '32px' }}>
           {NAV_LINKS.map(link => (
             <a
-              key={link.id}
-              href={`#${link.id}`}
+              key={link.id ?? link.href}
+              href={link.href ?? `#${link.id}`}
               onClick={(e) => {
+                // A link with an href goes where it says; only the in-page ones are intercepted.
+                if (link.href) return;
                 e.preventDefault();
                 if (onNavClick) onNavClick(link.id);
               }}
