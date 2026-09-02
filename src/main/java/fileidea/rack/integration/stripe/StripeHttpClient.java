@@ -16,11 +16,17 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Two calls: create a Price (with the product declared inline), then a Payment Link for it.
+ * Three calls: create a Product, a Price against it, then a Payment Link.
  *
  * <p>Stripe's API is form-encoded, not JSON, and nests parameters with bracket syntax
  * ({@code line_items[0][price]}). Shipping address collection is enabled so the seller gets a
  * delivery address with the payment — the same thing a marketplace would hand them.
+ *
+ * <p>This used to declare the product inline on the Price, which is one fewer call but cannot
+ * carry a photo: {@code /v1/prices} rejects {@code product_data[images]} outright, and the
+ * description it does accept only lives in metadata, which Stripe never renders. The result was a
+ * checkout page showing a grey placeholder and no description for a garment whose photograph is
+ * the entire point of the product. Creating the Product first is the only way to attach either.
  */
 @Component
 public class StripeHttpClient implements StripeClient {
@@ -38,7 +44,7 @@ public class StripeHttpClient implements StripeClient {
     }
 
     @Override
-    public String createCheckoutLink(String productName, String description, BigDecimal amount) {
+    public String createCheckoutLink(String productName, String description, BigDecimal amount, String imageUrl) {
         if (!props.hasKey()) {
             return null;
         }
@@ -46,7 +52,8 @@ public class StripeHttpClient implements StripeClient {
             return null;
         }
         try {
-            String priceId = createPrice(productName, description, amount);
+            String productId = createProduct(productName, description, imageUrl);
+            String priceId = createPrice(productId, amount);
             return createPaymentLink(priceId);
         } catch (Exception e) {
             // A checkout is an enhancement to the listing, never a gate on it. If Stripe is
@@ -56,14 +63,30 @@ public class StripeHttpClient implements StripeClient {
         }
     }
 
-    private String createPrice(String productName, String description, BigDecimal amount) {
+    private String createProduct(String productName, String description, String imageUrl) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("name", trim(productName, 250, "Secondhand item"));
+        if (description != null && !description.isBlank()) {
+            form.add("description", trim(description, 490, ""));
+        }
+        // Only ever an absolute public URL - the caller nulls this out rather than hand Stripe an
+        // address it cannot reach. Stripe fetches the file itself when the Product is created.
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            form.add("images[0]", imageUrl.strip());
+        }
+        JsonNode product = post("/v1/products", form);
+        String id = text(product, "id");
+        if (id == null) {
+            throw new IllegalStateException("Stripe product response had no id: " + product);
+        }
+        return id;
+    }
+
+    private String createPrice(String productId, BigDecimal amount) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("currency", props.currency());
         form.add("unit_amount", String.valueOf(toMinorUnits(amount)));
-        form.add("product_data[name]", trim(productName, 250, "Secondhand item"));
-        if (description != null && !description.isBlank()) {
-            form.add("product_data[metadata][description]", trim(description, 490, ""));
-        }
+        form.add("product", productId);
         JsonNode price = post("/v1/prices", form);
         String id = text(price, "id");
         if (id == null) {

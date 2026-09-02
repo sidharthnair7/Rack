@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  */
 class PricingQueryTest {
 
-    private final PricingService pricing = new PricingService(null, null, null, null, null, null, null);
+    private final PricingService pricing = new PricingService(null, null, null, null, null, null, null, null);
     private final PriceCalculator calculator = new PriceCalculator();
 
     private static Item item(String brand, String type) {

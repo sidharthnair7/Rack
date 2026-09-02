@@ -10,7 +10,17 @@ const TERMINAL = ['LISTED', 'FAILED'];
 async function json(res) {
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 200)}` : ''}`);
+    // Prefer the server's own sentence over the status line. The API returns a JSON error body,
+    // and pasting that raw put things like `400 Bad Request: {"message":"sidshops.com is already
+    // registered..."}` in front of the user - the useful half wrapped in the half that is noise.
+    let detail = body.slice(0, 300);
+    try {
+      const parsed = JSON.parse(body);
+      detail = parsed.message || parsed.error || parsed.detail || detail;
+    } catch {
+      // Not JSON, so the raw text is the best we have.
+    }
+    throw new Error(detail ? detail : `${res.status} ${res.statusText}`);
   }
   return res.json();
 }

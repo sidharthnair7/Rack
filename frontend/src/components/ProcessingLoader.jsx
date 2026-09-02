@@ -89,7 +89,7 @@ function StageRow({ stage, state, seconds }) {
         fontWeight: isActive ? 600 : 400,
       }}>
         {isDone ? stage.done : stage.active}
-        {/* A live second count on the running stage. Try-on takes about eleven seconds, during
+        {/* A live second count on the running stage. Try-on takes about thirteen seconds, during
             which nothing else on this screen changes, and a screen that has not changed in ten
             seconds reads as one that has crashed. This is the real elapsed time, so it is proof
             the page is alive without inventing progress the backend has not reported. */}
@@ -190,7 +190,8 @@ export default function ProcessingLoader({ progress }) {
           marginTop: '26px', fontSize: '12px', fontFamily: SANS, color: MUTED,
           textAlign: 'center', lineHeight: 1.6,
         }}>
-          Rendering the garment on a model takes about ten seconds of that.
+          Six vendor calls, usually under a minute. Rendering the garment on a model
+          is the slowest stage, at roughly thirteen seconds.
         </p>
       </div>
     </div>

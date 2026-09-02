@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,17 +33,35 @@ public class NameComHttpClient implements NameComClient {
     @Override
     public List<String> search(String query) {
         requireCreds();
+        List<String> tlds = props.offerableTlds();
         JsonNode root = post("/core/v1/domains:search", Map.of(
                 "keyword", query,
-                "tldFilter", List.of("com", "store", "shop"),
+                "tldFilter", tlds,
                 "purchaseType", "registration"
         ));
         List<String> names = new ArrayList<>();
         for (JsonNode hit : iterable(root.path("results"))) {
             String name = text(hit, "domainName");
-            if (name != null) {
-                names.add(name);
+            if (name == null) {
+                continue;
             }
+            // name.com returns TLDs outside the filter it was handed. Against the sandbox that
+            // meant ten of eleven suggestions for one query were .shop names, and .shop cannot be
+            // registered there at all - so nearly every button in the panel was one that would
+            // fail when clicked. A suggestion the seller cannot claim is a broken control, not an
+            // honest disclosure of a limitation.
+            int dot = name.lastIndexOf('.');
+            String tld = dot < 0 ? "" : name.substring(dot + 1).toLowerCase(Locale.ROOT);
+            if (!tlds.contains(tld)) {
+                continue;
+            }
+            // Availability is re-checked before registering anyway, but there is no reason to
+            // offer a name the search already knows is gone.
+            JsonNode purchasable = hit.get("purchasable");
+            if (purchasable != null && purchasable.isBoolean() && !purchasable.booleanValue()) {
+                continue;
+            }
+            names.add(name);
         }
         return names;
     }
@@ -66,6 +85,10 @@ public class NameComHttpClient implements NameComClient {
     public void register(String domain) {
         requireCreds();
         Map<String, Object> body = new LinkedHashMap<>();
+        // No explicit contacts block. name.com falls back to the account's default registrant when
+        // none is supplied, and that is what works here. Supplying our own made it try to create
+        // fresh contact objects and reject them with "Admin Contact Create Failed", which turned a
+        // registration that had been succeeding into one that never ran.
         body.put("domain", Map.of("domainName", domain));
         body.put("years", 1);
         post("/core/v1/domains", body, Map.of("X-Idempotency-Key", UUID.randomUUID().toString()));

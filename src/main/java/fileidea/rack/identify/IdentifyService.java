@@ -15,6 +15,7 @@ import fileidea.rack.task.TaskEndpoints;
 import fileidea.rack.task.TaskOrchestrator;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -122,15 +123,31 @@ public class IdentifyService {
      * The brand is the word that keeps showing up across independent listings of the same
      * garment. Counting tokens across match titles is more robust than trusting any single
      * result, and it needs no model call, so the answer is reproducible in a demo.
+     *
+     * <p>Frequency alone is not enough, and the failure is not subtle: a pair of jeans came back
+     * branded <em>Solid</em>, because colour and fit words recur across independent listings in
+     * exactly the way a brand does. That wrong word then becomes the eBay query, so it takes the
+     * comps, the median and the listing title down with it.
+     *
+     * <p>So position breaks the tie. Marketplace titles are written brand-first - "Levi's Men's
+     * Slim Straight Jeans", "American Eagle Outfitters Men's Blue Dark Wash Denim" - while the
+     * descriptors trail behind. A token still has to appear in at least two independent titles to
+     * be considered at all; among those that do, the one that sits earliest wins.
      */
     static String recurringBrand(List<String> titles) {
         if (titles == null || titles.isEmpty()) {
             return null;
         }
+        String known = knownBrandIn(titles);
+        if (known != null) {
+            return known;
+        }
         Map<String, Integer> counts = new LinkedHashMap<>();
+        Map<String, Double> leadingness = new LinkedHashMap<>();
         Map<String, String> display = new LinkedHashMap<>();
         for (String title : titles) {
             Set<String> seenInThisTitle = new HashSet<>();
+            int position = 0;
             for (String word : title.split("[^\\p{Alnum}']+")) {
                 String key = word.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
                 if (key.length() < 3 || STOPWORDS.contains(key) || TYPE_WORDS.containsKey(key)) {
@@ -141,15 +158,56 @@ public class IdentifyService {
                 }
                 if (seenInThisTitle.add(key)) {
                     counts.merge(key, 1, Integer::sum);
+                    // Decaying weight: first surviving token in a title scores 1, the next 1/2,
+                    // then 1/3. Summed across titles, a word that consistently leads outranks one
+                    // that merely appears often.
+                    leadingness.merge(key, 1.0 / (1 + position), Double::sum);
                     display.putIfAbsent(key, word);
                 }
+                position++;
             }
         }
         return counts.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .filter(top -> top.getValue() >= 2)
+                .filter(entry -> entry.getValue() >= 2)
+                .max(Comparator.comparingDouble(entry -> leadingness.getOrDefault(entry.getKey(), 0.0)))
                 .map(top -> display.get(top.getKey()))
                 .orElseGet(() -> display.values().stream().findFirst().orElse(null));
+    }
+
+    /**
+     * Look for a brand we actually recognise before falling back to counting words.
+     *
+     * <p>Token frequency is a guess, and the guesses fail in a way that is obvious to anyone
+     * looking: a pair of jeans was branded "Solid", and once that word was blocked the same photo
+     * came back "Long". Adding another word to the blocklist each time is whack-a-mole, because
+     * the underlying signal - "this word appears a lot" - genuinely cannot distinguish a brand
+     * from an adjective.
+     *
+     * <p>A name from this list is different in kind: if "Levi's" appears across independent
+     * listings of the same garment, that is not a coincidence to be weighed, it is the answer.
+     * Longest first, so "American Eagle" is not shortened to "Eagle" and "North Face" beats
+     * "Face". The heuristic still runs for anything unlisted, and the brand stays user-editable,
+     * because no fixed list covers secondhand clothing.
+     */
+    static String knownBrandIn(List<String> titles) {
+        String best = null;
+        int bestHits = 0;
+        for (String brand : KNOWN_BRANDS) {
+            String needle = brand.toLowerCase(Locale.ROOT);
+            int hits = 0;
+            for (String title : titles) {
+                if (title != null && title.toLowerCase(Locale.ROOT).contains(needle)) {
+                    hits++;
+                }
+            }
+            // A brand named in two independent listings of the same garment is the brand. One
+            // mention is as likely to be a "similar to" suggestion in a marketplace title.
+            if (hits >= 2 && hits > bestHits) {
+                best = brand;
+                bestHits = hits;
+            }
+        }
+        return best;
     }
 
     static String garmentTypeIn(List<String> titles) {
@@ -203,6 +261,40 @@ public class IdentifyService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    /**
+     * Apparel brands common in secondhand resale, longest first so multi-word names win over the
+     * single words inside them. Not exhaustive by design - it is a precision filter, not a
+     * catalogue, and anything it misses falls through to the frequency heuristic.
+     */
+    private static final List<String> KNOWN_BRANDS = List.of(
+            "American Eagle", "Abercrombie & Fitch", "Abercrombie", "Tommy Hilfiger",
+            "Ralph Lauren", "Calvin Klein", "Under Armour", "The North Face", "North Face",
+            "Canada Goose", "Fruit of the Loom", "Banana Republic", "Urban Outfitters",
+            "Brooks Brothers", "Marc Jacobs", "Michael Kors", "Kate Spade", "Stone Island",
+            "Fred Perry", "Ben Sherman", "Paul Smith", "Hugo Boss", "Emporio Armani", "Armani",
+            "Dolce & Gabbana", "Yves Saint Laurent", "Saint Laurent", "Louis Vuitton",
+            "Bottega Veneta", "Salvatore Ferragamo", "Alexander McQueen", "Vivienne Westwood",
+            "Comme des Garcons", "Acne Studios", "Norse Projects", "Massimo Dutti",
+            "Sport Chek", "Eddie Bauer", "L.L.Bean", "Duluth Trading", "Helly Hansen",
+            "Mountain Hardwear", "Black Diamond", "Fjallraven", "Sweaty Betty", "Free People",
+            "Anthropologie", "Forever 21", "Charlotte Russe", "Old Navy", "New Balance",
+            "Levi's", "Levis", "Nike", "Adidas", "Puma", "Reebok", "Converse", "Vans",
+            "Carhartt", "Champion", "Patagonia", "Columbia", "Arcteryx", "Moncler", "Burberry",
+            "Gucci", "Prada", "Versace", "Balenciaga", "Givenchy", "Fendi", "Hermes", "Chanel",
+            "Dior", "Lacoste", "Superdry", "Diesel", "Wrangler", "Dickies", "Timberland",
+            "Uniqlo", "Zara", "Mango", "Bershka", "Primark", "Topshop", "Reiss", "Whistles",
+            "Lululemon", "Athleta", "Gymshark", "Fabletics", "Everlane", "Madewell", "Talbots",
+            "Aritzia", "Roots", "Guess", "Hollister", "Gildan", "Hanes", "Wilson", "Oakley",
+            "Quiksilver", "Billabong", "Rip Curl", "Volcom", "Element", "Thrasher", "Supreme",
+            "Stussy", "Obey", "Herschel", "Jansport", "Osprey", "Salomon", "Merrell", "Keen",
+            "Clarks", "Doc Martens", "Dr. Martens", "Birkenstock", "Crocs", "Skechers", "Asics",
+            "Brooks", "Saucony", "Hoka", "Fila", "Kappa", "Umbro", "Ellesse", "Sergio Tacchini",
+            "Jordan", "Yeezy", "Bape", "Palace", "Carhartt WIP", "Gap", "Uniqlo U", "Muji",
+            "Cos", "Arket", "Weekday", "Monki", "Nordstrom", "Macys", "Kohls", "Target",
+            "Walmart", "Costco", "Lands End", "J.Crew", "JCrew", "Express", "Aeropostale",
+            "Pacsun", "Zumiez", "Boohoo", "Shein", "Asos", "Reformation", "Sezane", "Ganni"
+    );
+
     private static final Set<String> STOPWORDS = Set.of(
             "the", "and", "for", "with", "size", "new", "used", "vintage", "original", "fit",
             "men", "mens", "women", "womens", "unisex", "kids", "boys", "girls", "authentic",
@@ -215,7 +307,21 @@ public class IdentifyService {
             // back as "Stock" - which then searches eBay for stock photos rather than clothing.
             "stock", "photo", "photos", "picture", "image", "images", "royalty", "depositphotos",
             "shutterstock", "istock", "alamy", "getty", "adobe", "dreamstime", "vector",
-            "isolated", "background", "closeup", "close", "top", "view", "flat", "lay", "mockup"
+            "isolated", "background", "closeup", "close", "top", "view", "flat", "lay", "mockup",
+            // Colour, fabric, fit and construction words. These recur across independent listings
+            // in exactly the way a brand does, which is how a pair of jeans came back branded
+            // "Solid". Position weighting in recurringBrand handles the rest; this removes the
+            // ones frequent enough to lead a title on their own ("Blue Drawstring Jeans").
+            "solid", "wash", "washed", "dark", "cotton", "wool", "linen", "leather", "suede",
+            "fleece", "nylon", "polyester", "cashmere", "silk", "corduroy", "flannel", "red",
+            "pink", "purple", "yellow", "orange", "cream", "khaki", "olive", "burgundy",
+            "maroon", "teal", "ivory", "charcoal", "striped", "stripe", "plaid", "checked",
+            "floral", "graphic", "print", "printed", "patterned", "distressed", "faded",
+            "cropped", "oversized", "fitted", "loose", "baggy", "tapered", "bootcut", "skinny",
+            "rise", "waist", "sleeve", "sleeved", "zip", "zipper", "button", "buttoned",
+            "collar", "collared", "hooded", "drawstring", "lined", "unlined", "pocket",
+            "pockets", "logo", "accent", "series", "edition", "casual", "formal", "everyday",
+            "soft", "heavy", "lightweight", "adult", "youth", "petite", "excellent", "clean"
     );
 
     private static final Map<String, String> TYPE_WORDS = Map.ofEntries(

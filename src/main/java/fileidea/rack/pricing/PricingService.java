@@ -27,6 +27,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
 
 @Service
 public class PricingService {
@@ -43,6 +47,7 @@ public class PricingService {
     private final SerpApiClient serpApi;
     private final PriceCalculator calculator;
     private final TaskOrchestrator tasks;
+    private final ExecutorService fanout;
 
     public PricingService(
             ItemRepository items,
@@ -51,7 +56,8 @@ public class PricingService {
             CompRepository comps,
             SerpApiClient serpApi,
             PriceCalculator calculator,
-            TaskOrchestrator tasks
+            TaskOrchestrator tasks,
+            ExecutorService fanout
     ) {
         this.items = items;
         this.batches = batches;
@@ -60,6 +66,36 @@ public class PricingService {
         this.serpApi = serpApi;
         this.calculator = calculator;
         this.tasks = tasks;
+        this.fanout = fanout;
+    }
+
+    private <T> CompletableFuture<T> async(Supplier<T> vendorCall) {
+        return CompletableFuture.supplyAsync(vendorCall, fanout);
+    }
+
+    /**
+     * Join without burying the real failure.
+     *
+     * <p>{@code join()} wraps whatever the vendor call threw in a {@link CompletionException}, so
+     * a SerpApi error would reach the caller as a generic wrapper instead of the exception the
+     * sequential version raised. Unwrapping keeps the failure behaviour identical to before these
+     * calls were fanned out - the pricing stage still fails on the same conditions, with the same
+     * message in the log.
+     */
+    private static <T> T join(CompletableFuture<T> call) {
+        try {
+            return call.join();
+        } catch (CompletionException e) {
+            switch (e.getCause()) {
+                case RuntimeException runtime -> throw runtime;
+                case Error error -> throw error;
+                case null, default -> throw e;
+            }
+        }
+    }
+
+    private static long millisSince(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000;
     }
 
     @Transactional
@@ -87,10 +123,21 @@ public class PricingService {
             });
         }
 
-        List<EbayComp> comparables = distinctListings(serpApi.ebayComps(query));
-        List<ShoppingResult> shopping = serpApi.shopping(query);
         String brand = item.displayBrand() == null ? query : item.displayBrand();
-        List<Integer> trends = serpApi.trendSeries(brand);
+
+        // Three independent questions: what are comparable ones selling for, what did it cost new,
+        // and is demand rising. None of them needs another's answer, so asking them one at a time
+        // just adds two network round trips to the wait a seller sits through. Fired together, the
+        // stage costs the slowest engine instead of the sum of all three.
+        long started = System.nanoTime();
+        CompletableFuture<List<EbayComp>> ebayCall = async(() -> serpApi.ebayComps(query));
+        CompletableFuture<List<ShoppingResult>> shoppingCall = async(() -> serpApi.shopping(query));
+        CompletableFuture<List<Integer>> trendCall = async(() -> serpApi.trendSeries(brand));
+
+        List<EbayComp> comparables = distinctListings(join(ebayCall));
+        List<ShoppingResult> shopping = join(shoppingCall);
+        List<Integer> trends = join(trendCall);
+        log.info("pricing item {}: 3 SerpApi engines answered in {} ms", itemId, millisSince(started));
 
         List<BigDecimal> compPrices = new ArrayList<>();
         for (EbayComp hit : comparables) {

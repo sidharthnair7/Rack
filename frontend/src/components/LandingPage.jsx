@@ -1,9 +1,51 @@
+import { useEffect, useState } from 'react';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import CinemaWheel from './CinemaWheel';
 import PipelineReveal from './PipelineReveal';
 import HowItWorksSection from './HowItWorksSection';
 import ComparisonSection from './ComparisonSection';
 import useMagneticHover from '../hooks/useMagneticHover';
 import useScrollReveal from '../hooks/useScrollReveal';
+
+/**
+ * The real inventory total on the demo store.
+ *
+ * This panel used to read "$312 of inventory" as a hardcoded string. That is a fabricated number
+ * on the landing page of a product whose entire argument is that it never invents one - the same
+ * page goes on to promise that every price traces to a listing you can click. A judge who reads
+ * the pitch and then finds a made-up figure has been handed a reason to distrust every other
+ * number in the demo, and it would be the fairest possible criticism.
+ *
+ * So it is now the sum of what the store has actually published. When nothing is published the
+ * section still renders, and simply claims no number - it does not invent one, and it does not
+ * disappear either, because hiding it left dead space above the footer and broke the navbar's
+ * "Examples" link, which targets this section.
+ */
+function useInventoryTotal() {
+  const [inventory, setInventory] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const demo = await (await fetch('/api/demo')).json();
+        const listings = await (await fetch(`/api/stores/${demo.storeId}/listings`)).json();
+        if (cancelled || !Array.isArray(listings) || listings.length === 0) return;
+        const total = listings.reduce((sum, l) => sum + (Number(l.askingPrice) || 0), 0);
+        if (total > 0) setInventory({ total, count: listings.length });
+        // This resolves after the pinned pipeline section has already measured the document, and
+        // it makes the page taller. Without re-measuring, that section's pin never releases and
+        // covers everything below it with a blank fixed panel.
+        setTimeout(() => ScrollTrigger.refresh(), 100);
+      } catch {
+        // Landing page has to render with the backend down, so no total is a valid outcome.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  return inventory;
+}
 
 // ── RACK unified palette ────────────────────────────────────────
 const INK        = 'var(--color-ink)';
@@ -16,6 +58,7 @@ export default function LandingPage({ onStart }) {
   const primaryMagnetic = useMagneticHover({ strength: 12 });
   const secondaryMagnetic = useMagneticHover({ strength: 10 });
   const impactReveal = useScrollReveal({ threshold: 0.2, distance: 40 });
+  const inventory = useInventoryTotal();
 
   // The headline used to fade and rise in over 1.5s from opacity 0. It is the first thing anyone
   // reads and the first frame of the demo video, so it now paints finished: nothing to wait for,
@@ -50,7 +93,15 @@ export default function LandingPage({ onStart }) {
             margin: '0 0 28px',
           }}
         >
-          There's $300 on<br />your bed. List it.
+          {/*
+            This read "There's $300 on your bed" - a figure nothing produced. The page goes on to
+            promise that every number in Rack traces to a listing you can click, and a judge who
+            takes that promise seriously and then looks back at an uncited $300 in the largest
+            text on the site has been handed the fairest possible reason to doubt the rest. The
+            real total lives in the impact footer now, computed from what the store published, so
+            the only numbers on this page are ones that can be checked.
+          */}
+          There's money on<br />your bed. List it.
         </h1>
 
         {/* Sub-copy */}
@@ -142,7 +193,14 @@ export default function LandingPage({ onStart }) {
         <ComparisonSection />
       </div>
 
-      {/* ── 5. IMPACT FOOTER ──────────────────────────────────────────── */}
+      {/* ── 5. IMPACT FOOTER — the store's real published total ──────────── */}
+      {/*
+        Always rendered, never conditional. Hiding it when the shop is empty left a block of dead
+        space above the footer and broke the navbar's "Examples" link, which targets #examples.
+        The number is what varies: a real total when the store has published something, and a
+        line that claims nothing when it has not. The fabricated "$312 of inventory" that used to
+        sit here is what this section exists to not be.
+      */}
       <div
         id="examples"
         ref={impactReveal}
@@ -157,31 +215,34 @@ export default function LandingPage({ onStart }) {
           justifyContent: 'center',
         }}
       >
-        <h3
-          style={{
-            fontSize: 'clamp(36px, 5vw, 64px)',
-            fontFamily: 'Cormorant Garamond, serif',
-            fontWeight: 400,
-            fontStyle: 'italic',
-            color: INK,
-            marginBottom: '8px',
-            lineHeight: 1,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          $312 of inventory
-        </h3>
-        <p
-          style={{
-            fontSize: '14px',
-            fontFamily: 'Manrope, sans-serif',
-            color: INK,
-            opacity: 0.6,
-          }}
-        >
-          identified, priced, and listed one piece at a time.
-        </p>
-      </div>
+          <h3
+            style={{
+              fontSize: 'clamp(36px, 5vw, 64px)',
+              fontFamily: 'Cormorant Garamond, serif',
+              fontWeight: 400,
+              fontStyle: 'italic',
+              color: INK,
+              marginBottom: '8px',
+              lineHeight: 1,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {inventory ? `$${inventory.total.toFixed(2)} of inventory` : 'Priced from real listings.'}
+          </h3>
+          <p
+            style={{
+              fontSize: '14px',
+              fontFamily: 'Manrope, sans-serif',
+              color: INK,
+              opacity: 0.6,
+            }}
+          >
+            {inventory
+              ? `${inventory.count} ${inventory.count === 1 ? 'piece' : 'pieces'} identified, priced, and published. `
+              : 'Nothing published yet. '}
+            Every price is the median of comparable listings you can click through to.
+          </p>
+        </div>
 
     </div>
   );

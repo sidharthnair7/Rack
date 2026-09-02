@@ -121,8 +121,25 @@ public class TaskPoller {
             task.setAttempts(Math.max(0, task.getAttempts() - 1));
             tasks.save(task);
         } catch (Exception e) {
-            log.warn("task {} failed for item {}: {}", task.getId(), itemId, e.getMessage());
-            task.setStatus(TaskStatus.ERROR);
+            // Back to PENDING, not ERROR, so the next tick tries again.
+            //
+            // This used to dead-end on the first failure, which meant MAX_ATTEMPTS was unreachable
+            // for the one class of failure it exists for. A single blip from a vendor - a timeout,
+            // a 502, a dropped connection - left the item stranded in a non-terminal state with
+            // nothing to move it: the UI polls for two minutes and then reports the piece as
+            // unlistable. Every stage here is idempotent (each writes by item id and the imaging
+            // stages re-upload rather than resume), so retrying is safe, and the attempts ceiling
+            // above still stops a genuinely bad photo from looping.
+            int attempts = task.getAttempts();
+            if (attempts >= MAX_ATTEMPTS) {
+                log.warn("task {} failed for item {} on final attempt {}: {}",
+                        task.getId(), itemId, attempts, e.getMessage());
+                task.setStatus(TaskStatus.ERROR);
+            } else {
+                log.warn("task {} failed for item {} (attempt {} of {}), retrying: {}",
+                        task.getId(), itemId, attempts, MAX_ATTEMPTS, e.getMessage());
+                task.setStatus(TaskStatus.PENDING);
+            }
             tasks.save(task);
         }
     }

@@ -116,7 +116,12 @@ public class ImagingService {
                 .orElse(null);
     }
 
+    private static long millisSince(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
     private void tryOn(Item item, byte[] garment, String garmentFileId) {
+        long started = System.nanoTime();
         try {
             // The garment is uploaded to cloth-v4 directly rather than reusing the file id that
             // came back from the enhance stage. Chaining a previous stage's dstId works for the
@@ -139,6 +144,7 @@ public class ImagingService {
             if (result != null && result.resultUrl() != null) {
                 persistDownload(item, ImageKind.ON_MODEL, result.resultUrl(), taskId);
             }
+            log.info("imaging item {}: cloth-v4 try-on finished in {} ms", item.getId(), millisSince(started));
         } catch (Exception e) {
             log.warn("try-on failed for item {} — falling back to catalog: {}", item.getId(), e.getMessage());
             saveBytes(item, ImageKind.ON_MODEL, garment);
@@ -153,6 +159,7 @@ public class ImagingService {
             String srcFileId,
             Map<String, Object> extra
     ) {
+        long started = System.nanoTime();
         try {
             String fileId = srcFileId != null ? srcFileId : perfectCorp.upload(service, input, kind.name().toLowerCase() + ".jpg");
             Map<String, Object> body = new LinkedHashMap<>(extra);
@@ -164,6 +171,7 @@ public class ImagingService {
                 return new StageResult(input, srcFileId);
             }
             byte[] next = persistDownload(item, kind, result.resultUrl(), taskId);
+            log.info("imaging item {}: {} finished in {} ms", item.getId(), service, millisSince(started));
             return new StageResult(next, result.dstId());
         } catch (Exception e) {
             log.warn("{} failed for item {} — keeping previous image: {}", service, item.getId(), e.getMessage());

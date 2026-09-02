@@ -35,6 +35,18 @@ export default function DomainClaim({ storeId, onClaimed }) {
   const [claimed, setClaimed] = useState(null);
   const [error, setError] = useState(null);
   const [done, setDone] = useState(-1);
+  // Step names the server reported as actually completed. The UI used to advance a counter on a
+  // timer, which meant it would have shown six green ticks even when the API only managed three.
+  const [completed, setCompleted] = useState([]);
+  // Why each unfinished step did not finish, keyed by the name.com operation, as the server
+  // reported it. A single shared caveat was wrong for at least one row every time.
+  const [notes, setNotes] = useState({});
+
+  // STEPS are display labels ("domains (register)"); the server keys on the operation ("domains").
+  const reasonFor = (step) => {
+    const key = Object.keys(notes).find((k) => step.startsWith(k));
+    return key ? notes[key] : 'did not complete';
+  };
 
   const runSearch = async (e) => {
     e.preventDefault();
@@ -60,14 +72,14 @@ export default function DomainClaim({ storeId, onClaimed }) {
     setBusy(true);
     setError(null);
     try {
-      // Availability, registration, the A record, the subdomain and forwarding all happen inside
-      // this one request. Stepping the labels lets a viewer see the sequence the API runs.
-      for (let i = 2; i < STEPS.length; i += 1) {
-        setDone(i);
-        await new Promise((r) => setTimeout(r, 200));
-      }
+      setDone(2);
       const result = await registerDomain(storeId, domain);
       const name = result.domain || domain;
+      // Only tick what the server says landed. In name.com's sandbox a registration can succeed
+      // while the DNS write 404s, and showing six ticks for three completed calls would be the
+      // kind of claim this whole product exists to avoid.
+      setCompleted(['domains:search', ...(result.completed || [])]);
+      setNotes(result.notes || {});
       setClaimed(name);
       setDone(STEPS.length);
       if (onClaimed) onClaimed(name);
@@ -112,8 +124,8 @@ export default function DomainClaim({ storeId, onClaimed }) {
 
       <p style={{ fontSize: '13px', color: MUTED, fontFamily: SANS, margin: '0 0 18px', lineHeight: 1.6 }}>
         {claimed
-          ? 'Registered through the name.com API, with the A record, the www subdomain and URL forwarding written for you.'
-          : 'Search name.com for a name that is actually available. Registration, DNS and forwarding happen in one step.'}
+          ? 'Run against name.com’s sandbox, so nothing is charged. Search, availability and registration complete there and the domain appears in the account. The sandbox registers a domain without provisioning a DNS zone behind it, so the record, subdomain and forwarding calls return 404 there. Same code path, same requests, and they land in production.'
+          : 'Search name.com for a name that is actually available. Registration, DNS and forwarding run in one step.'}
       </p>
 
       {!claimed && (
@@ -173,10 +185,22 @@ export default function DomainClaim({ storeId, onClaimed }) {
                 opacity: i <= done ? 1 : 0.35,
               }}
             >
-              {i < done
+              {(completed.length ? completed.some((c) => s.startsWith(c)) : i < done)
                 ? <Check size={13} strokeWidth={2.4} color={ACCENT} />
                 : <Circle size={9} strokeWidth={1.8} color={MUTED} />}
               <code style={{ fontSize: '12px' }}>{s}</code>
+              {/*
+                The reason comes from the server per step, rather than one caveat pasted onto
+                every incomplete row. "production only" is true of the DNS calls, which 404
+                because the sandbox registers a domain without provisioning a zone behind it.
+                It is not true of a registration that failed because the name was already taken,
+                and labelling that "production only" would hide a real error behind a caveat.
+              */}
+              {completed.length > 0 && !completed.some((c) => s.startsWith(c)) && (
+                <span style={{ fontSize: '11px', color: MUTED }}>
+                  {reasonFor(s)}
+                </span>
+              )}
             </li>
           ))}
         </ul>

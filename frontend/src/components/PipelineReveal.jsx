@@ -125,6 +125,7 @@ export default function PipelineReveal() {
             if (!cancelled) setShots(resolved);
             return;
           }
+
         }
       } catch {
         // Landing page must render with the backend down.
@@ -204,10 +205,32 @@ export default function PipelineReveal() {
       );
     });
 
+    // Re-measure once everything that changes page height has settled.
+    //
+    // ScrollTrigger computes the pin's end from the document height at creation time. This
+    // section's own images arrive from an API call, and the landing page below it grows when the
+    // live inventory total resolves, so by the time a visitor scrolls, the end position is stale.
+    // When it is, the pinned panel never unpins: it stays position:fixed over the whole viewport
+    // and paints a blank sheet across the comparison table, the inventory total and the footer.
+    // That looked like a large empty gap at the bottom of the page.
+    const refresh = () => ScrollTrigger.refresh();
+    window.addEventListener('load', refresh);
+    const settle = setTimeout(refresh, 1200);
+
     return () => {
+      window.removeEventListener('load', refresh);
+      clearTimeout(settle);
       ScrollTrigger.getAll().forEach(st => st.kill());
     };
   }, [prefersReducedMotion]);
+
+  // The stage images swap from the bundled fallbacks to live pipeline output, which changes their
+  // intrinsic size and therefore the height of everything below. Re-measure when that happens.
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const id = setTimeout(() => ScrollTrigger.refresh(), 200);
+    return () => clearTimeout(id);
+  }, [shots, prefersReducedMotion]);
 
 
   return (

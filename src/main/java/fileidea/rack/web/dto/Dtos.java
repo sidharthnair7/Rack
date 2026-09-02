@@ -85,13 +85,13 @@ public final class Dtos {
     public static PricePanelResponse pricePanel(Item item, PriceEstimate estimate, List<Comp> comps) {
         int n = estimate.getMedianSoldPrice() == null ? 0 : estimate.getCompCount();
         String warning = n > 0 && n < 4
-                ? "Limited comp data (" + n + " listings found) — treat as an estimate."
+                ? "Limited comp data (" + n + " listings found). Treat as an estimate."
                 : null;
         String brand = item.displayBrand() == null ? "Unknown" : item.displayBrand();
         String type = item.getIdentifiedType() == null ? "" : item.getIdentifiedType();
         return new PricePanelResponse(
                 item.getId(),
-                (brand + " — " + type).trim(),
+                (brand + " " + type).strip(),
                 item.getCondition(),
                 estimate.getMedianSoldPrice(),
                 estimate.getP25(),

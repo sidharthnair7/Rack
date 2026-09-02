@@ -10,6 +10,10 @@ import fileidea.rack.intake.Batch;
 import fileidea.rack.intake.BatchRepository;
 import fileidea.rack.intake.Item;
 import fileidea.rack.intake.ItemRepository;
+import fileidea.rack.common.ImageKind;
+import fileidea.rack.config.StripeProperties;
+import fileidea.rack.imaging.ImageAsset;
+import fileidea.rack.imaging.ImageAssetRepository;
 import fileidea.rack.integration.llm.CopyGenerator;
 import fileidea.rack.integration.stripe.StripeClient;
 import fileidea.rack.pricing.PriceEstimate;
@@ -28,6 +32,8 @@ public class ListingService {
     private final PriceEstimateRepository estimates;
     private final CopyGenerator copy;
     private final StripeClient stripe;
+    private final ImageAssetRepository images;
+    private final StripeProperties stripeProps;
 
     public ListingService(
             ItemRepository items,
@@ -35,7 +41,9 @@ public class ListingService {
             ListingRepository listings,
             PriceEstimateRepository estimates,
             CopyGenerator copy,
-            StripeClient stripe
+            StripeClient stripe,
+            ImageAssetRepository images,
+            StripeProperties stripeProps
     ) {
         this.items = items;
         this.batches = batches;
@@ -43,6 +51,8 @@ public class ListingService {
         this.estimates = estimates;
         this.copy = copy;
         this.stripe = stripe;
+        this.images = images;
+        this.stripeProps = stripeProps;
     }
 
     @Transactional
@@ -73,13 +83,39 @@ public class ListingService {
         boolean repriced = previousPrice == null || previousPrice.compareTo(asking) != 0;
         if (repriced || listing.getCheckoutUrl() == null) {
             listing.setCheckoutUrl(stripe.createCheckoutLink(
-                    listing.getTitle(), listing.getDescription(), asking));
+                    listing.getTitle(), listing.getDescription(), asking, checkoutImage(itemId)));
         }
         listings.save(listing);
 
         item.setStatus(ItemStatus.LISTED);
         items.save(item);
         return listing;
+    }
+
+    /**
+     * The photo Stripe shows on the checkout page, best available first.
+     *
+     * <p>Preference order matches what a buyer most wants to see: the garment worn, then cut out
+     * of its background, then the raw phone photo. The original is a worthwhile last resort — a
+     * picture of the jacket on a bed still tells a buyer what they are paying for, where the grey
+     * placeholder Stripe shows by default tells them nothing.
+     *
+     * <p>Returns {@code null} on a local run, where no URL of ours is reachable from Stripe.
+     */
+    private String checkoutImage(Long itemId) {
+        List<ImageAsset> assets = images.findByItemId(itemId);
+        for (ImageKind kind : List.of(ImageKind.ON_MODEL, ImageKind.CUTOUT, ImageKind.ORIGINAL)) {
+            String url = assets.stream()
+                    .filter(a -> a.getKind() == kind && a.getUrl() != null && !a.getUrl().isBlank())
+                    .map(ImageAsset::getUrl)
+                    .findFirst()
+                    .orElse(null);
+            String absolute = stripeProps.publicUrlFor(url);
+            if (absolute != null) {
+                return absolute;
+            }
+        }
+        return null;
     }
 
     @Transactional(readOnly = true)

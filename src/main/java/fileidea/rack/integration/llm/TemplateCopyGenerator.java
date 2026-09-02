@@ -26,8 +26,8 @@ public class TemplateCopyGenerator implements CopyGenerator {
                 + ", "
                 + blankTo(condition, "good").toLowerCase()
                 + " condition. Shot and retouched from the seller's own photo. "
-                + "The asking price is the median of comparable listings for this piece "
-                + "— every one of them is listed below, and every one is clickable.";
+                + "The asking price is the median of comparable listings for this piece. "
+                + "Every one of them is listed below, and every one is clickable.";
     }
 
     @Override
