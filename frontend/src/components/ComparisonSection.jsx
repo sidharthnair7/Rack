@@ -27,6 +27,10 @@ const HAIR       = 'var(--color-hairline)';
 // page. What survives is the part that is actually unique: the price links to the listing it came
 // from, the garment gets rendered worn on a model, and the seller ends up owning the shop.
 const ROWS = [
+  // Both competitors are one-listing-at-a-time by design: you open a draft, you fill it in, you
+  // move it to other marketplaces. Neither claims to take several garments out of one photograph,
+  // because neither is trying to remove the photography step at all.
+  { feature: 'Several garments from one photograph',     rack: true,  vendoo: false, crosslist: false },
   { feature: 'Prices it from comparable listings',       rack: true,  vendoo: false, crosslist: true  },
   { feature: 'Every price links to the listing it came from', rack: true,  vendoo: false, crosslist: false },
   { feature: 'Removes the background',                   rack: true,  vendoo: true,  crosslist: true  },

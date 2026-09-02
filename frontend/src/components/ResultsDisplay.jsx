@@ -281,8 +281,17 @@ export default function ResultsDisplay({ data, onReset, onCorrected }) {
         marginBottom: '40px', borderBottom: `1px solid ${HAIR}`, paddingBottom: '24px', gap: '16px', flexWrap: 'wrap',
       }}>
         <div>
+          {/*
+            Say where these listings came from, not just how many there are.
+            A photo holding several garments is split into one item each, and "3 pieces listed"
+            reads identically whether that happened or whether three files were uploaded. The
+            whole claim - one photograph empties a rail - is invisible unless it is stated here.
+          */}
           <p style={{ ...eyebrow, marginBottom: '8px' }}>
             {items.length} {items.length === 1 ? 'piece' : 'pieces'} listed
+            {data?.photos > 0 && items.length > data.photos && (
+              <> · from {data.photos === 1 ? 'one photograph' : `${data.photos} photographs`}</>
+            )}
           </p>
           <h1 style={{
             fontSize: '38px', fontFamily: SERIF, fontWeight: 350, lineHeight: 1.08,
@@ -290,6 +299,12 @@ export default function ResultsDisplay({ data, onReset, onCorrected }) {
           }}>
             {money(data?.total)} of inventory.
           </h1>
+          {data?.photos > 0 && items.length > data.photos && (
+            <p style={{ fontSize: '13px', color: MUTED, fontFamily: SANS, marginTop: '8px', maxWidth: '52ch' }}>
+              Rack found {items.length} separate garments in {data.photos === 1 ? 'that one photo' : 'those photos'} and
+              priced and photographed each one on its own.
+            </p>
+          )}
           {data?.failed > 0 && (
             <p style={{ fontSize: '13px', color: MUTED, fontFamily: SANS, marginTop: '8px' }}>
               {data.failed} {data.failed === 1 ? 'piece' : 'pieces'} couldn’t be priced from real listings, so
@@ -326,7 +341,8 @@ export default function ResultsDisplay({ data, onReset, onCorrected }) {
       {items.length === 0 ? (
         <p style={{ fontFamily: SANS, color: MUTED, fontSize: '15px', maxWidth: '46ch' }}>
           Nothing could be priced from real comparable listings, so nothing was published.
-          Rack won’t invent a number. Try a clearer photo of a single garment.
+          Rack won’t invent a number. Try a clearer photo, with the garments laid out and not
+          overlapping.
         </p>
       ) : (
         items.map((item, i) => (

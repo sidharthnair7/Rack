@@ -117,7 +117,7 @@ export default function LandingPage({ onStart }) {
             margin: '0 auto 40px',
           }}
         >
-          Photograph one piece. RACK identifies it, prices it from real listings you can click and check, shoots it on a model, and publishes it to a storefront on your own domain, in about a minute.
+          Lay the pile out and take one photo. RACK finds each garment in it, prices every piece from real listings you can click and check, shoots each on a model, and publishes them to a storefront on your own domain, in about a minute.
         </p>
 
         {/* CTAs — magnetic hover */}

@@ -1,8 +1,10 @@
 # Rack
 
-**Photograph one piece. Get it priced, shot on a model, and listed on your own domain.**
+**Photograph the pile. Every piece priced, shot on a model, and listed on your own domain.**
 
-Rack is a listing engine for people who resell secondhand clothing. Photograph one piece on your bed and Rack identifies it, prices it from **real comparable listings you can click and verify**, produces catalog-quality photography without a studio or a model, writes the listing, and publishes it to a storefront with checkout attached, on a domain registered through the name.com API.
+Rack is a listing engine for people who resell secondhand clothing. Lay several garments out, take **one** photograph, and Rack finds each piece in it, identifies them, prices every one from **real comparable listings you can click and verify**, produces catalog-quality photography without a studio or a model, writes the listings, and publishes them to a storefront with checkout attached, on a domain registered through the name.com API.
+
+Finding the separate garments needs no object-detection model. Perfect Corp's background removal returns an RGBA image whose alpha channel is a mask of everything that is not background, so separate garments are separate islands in it and splitting the photo is connected-component labelling over a bitmap. Each piece then runs the pipeline in parallel with its siblings: **one photo of two garments produces two finished listings in about 40 seconds**, which is what a single garment costs.
 
 **Live:** https://rackai.store
 

@@ -122,6 +122,11 @@ export async function processImage(input, onProgress) {
     storefrontUrl: `/shop/${storeId}`,
     total: batch.totalEstimatedValue ?? 0,
     failed,
+    // How many photographs produced these listings. When it is fewer than the number of pieces,
+    // a single photo was split into its separate garments - which is the thing that makes this a
+    // way to empty a closet rather than a way to make one listing, and it is invisible unless the
+    // results screen says so.
+    photos: files.length,
     items: results.map(detail => toCard(detail, storeId)),
   };
 }
