@@ -1,14 +1,42 @@
+<div align="center">
+
 # Rack
 
-**Photograph the pile. Every piece priced, shot on a model, and listed on your own domain.**
+### Photograph the pile. Every piece priced, shot on a model, and listed on a domain you own.
 
-Rack is a listing engine for people who resell secondhand clothing. Lay several garments out, take **one** photograph, and Rack finds each piece in it, identifies them, prices every one from **real comparable listings you can click and verify**, produces catalog-quality photography without a studio or a model, writes the listings, and publishes them to a storefront with checkout attached, on a domain registered through the name.com API.
+[![Live](https://img.shields.io/badge/live-rackai.store-8a3b2a?style=flat-square)](https://rackai.store)
+![Java](https://img.shields.io/badge/Java-25-1c1a17?style=flat-square)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-1c1a17?style=flat-square)
+![React](https://img.shields.io/badge/React-Vite-1c1a17?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-80_passing-4a6741?style=flat-square)
+![Vendors](https://img.shields.io/badge/vendor_APIs-4_load--bearing-6e6862?style=flat-square)
 
-Finding the separate garments needs no object-detection model. Perfect Corp's background removal returns an RGBA image whose alpha channel is a mask of everything that is not background, so separate garments are separate islands in it and splitting the photo is connected-component labelling over a bitmap. Each piece then runs the pipeline in parallel with its siblings: **one photo of two garments produces two finished listings in about 40 seconds**, which is what a single garment costs.
+<img src="docs/hero.jpg" alt="A jacket photographed on a bed, background removed, then rendered worn on a model" width="100%">
 
-**Live:** https://rackai.store
+</div>
+
+Lay several garments out, take **one** photograph, and Rack finds each piece in it, identifies them,
+prices every one from **comparable listings you can click and verify**, produces catalog-quality
+photography without a studio or a model, writes the listings, and publishes them to a storefront
+with checkout attached — on a domain registered through the name.com API.
+
+**One photo of two garments produces two finished listings in about 40 seconds**, which is what a
+single garment costs. The second piece is nearly free, and that is the whole difference between a
+listing tool and emptying a closet.
 
 Built for the **DevNetwork [API + Cloud + AI] Hackathon 2026**.
+
+---
+
+## Contents
+
+[The rule](#the-rule-this-project-is-built-on) ·
+[How it works](#how-it-works) ·
+[Engineering highlights](#engineering-highlights) ·
+[Architecture](#architecture) ·
+[Vendor integrations](#vendor-integrations) ·
+[Running it](#running-it) ·
+[Known limits](#known-limits)
 
 ---
 
@@ -16,198 +44,386 @@ Built for the **DevNetwork [API + Cloud + AI] Hackathon 2026**.
 
 Listing friction, not willingness, is the binding constraint on resale.
 
-Depop, Vinted, Poshmark and ThredUp all still make a seller photograph, describe, and price every item by hand. A single listing takes 15–30 minutes done properly. A closet takes an afternoon nobody has, so the clothes stay in the closet — roughly 92 million tonnes of textiles go to waste every year while the resale market grows.
+Depop, Vinted, Poshmark and ThredUp all still make a seller photograph, describe, and price every
+item by hand. One listing takes 15–30 minutes done properly, so a closet is an afternoon nobody
+has — and roughly 92 million tonnes of textiles go to waste each year while the resale market grows.
 
-The two hardest parts are the two Rack automates:
+Two walls stand in the way, and Rack automates both:
 
-- **Pricing.** Knowing what a used garment is actually worth requires searching what comparable pieces go for, not asking an AI to guess.
-- **Photography.** A product photoshoot costs $500–2,000. Individual sellers post badly-lit bedroom photos and get badly-discounted offers.
+| Wall | What it costs today | What Rack does |
+|---|---|---|
+| **Pricing** | Manual searching, or an AI guess you cannot check | Median of live comparable listings, every source clickable |
+| **Photography** | A product shoot runs $500–$2,000 | Background removal, enhancement, and try-on on a synthetic model |
 
-**Why now:** the fashion and accessory try-on APIs that make the photo pipeline possible only shipped this year.
-
----
-
-## What it does
-
-```
-        PHOTO (one, from a phone)
-             │
-      ┌──────┴──────┐
-      │   IDENTIFY  │   SerpApi · Google Lens
-      └──────┬──────┘
-             │
-      ┌──────┴──────┐
-      │    PRICE    │   SerpApi · Google Shopping + eBay + Google Trends
-      └──────┬──────┘
-             │
-      ┌──────┴──────┐
-      │  PHOTOGRAPH │   Perfect Corp · enhance → on-model try-on
-      └──────┬──────┘   (model generated with AI Image Generator)
-             │
-      ┌──────┴──────┐
-      │   PUBLISH   │   name.com · search → register → DNS → subdomain
-      └──────┬──────┘
-             │
-      ┌──────┴──────┐
-      │     SELL    │   Stripe · hosted checkout per item, shipping collected
-      └─────────────┘
-```
+**Why now:** the fashion try-on APIs that make the photo pipeline possible only shipped this year.
 
 ---
 
 ## The rule this project is built on
 
-> **No number shown to a user is ever generated by a language model.**
+> ### No number shown to a user is ever generated by a language model.
 
-Every price comes from real eBay listings, computed arithmetically, with the source link rendered next to it. A judge — or a seller — can click any comp and open the listing it came from.
+Every price is the median of real listings, computed arithmetically, with each source rendered next
+to it as a link you can open. That single constraint decided the data sources, the failure
+behaviour, the UI, and what could not be built.
 
-> **On comps:** these are *live comparable listings*, not completed sales. eBay moved sold/completed listings behind a login in July 2026, after which SerpApi's `show_only=Sold` filter returns zero rows for every query — verified directly against the live API. Rather than quietly relabel asking prices as sale prices, every surface in the product says "listings".
+<table>
+<tr><th align="left">Deterministic — arithmetic over evidence</th><th align="left">AI — prose only</th></tr>
+<tr valign="top"><td>
 
-| Deterministic | AI |
-|---|---|
-| The suggested price (median of comparable listings) | Listing title and description |
-| The 25th–75th percentile range | Store name suggestions |
-| Retail anchor selection | Brand string normalisation |
-| Demand direction (thresholded slope over the trend series) | |
-| Category → try-on endpoint routing | |
-| The running inventory total | |
+- Suggested price (median of comparable listings)
+- 25th–75th percentile range
+- Retail anchor selection
+- Demand direction (thresholded slope)
+- Category → try-on endpoint routing
+- Running inventory total
 
-If fewer than four comps are found, the panel says so (`Limited comp data (2 listings found) — treat as an estimate.`) rather than presenting a confident number. If **no** comps are found, the item is failed rather than listed — Rack will not photograph or publish something it cannot price.
+</td><td>
+
+- Listing title and description
+- Store name suggestions
+- Brand string normalisation
+
+</td></tr>
+</table>
+
+**What the rule forces.** Fewer than four comps and the panel says so rather than projecting
+confidence it has not earned. **No** comps and the item is failed rather than listed — Rack will not
+photograph or publish something it cannot price.
+
+> **On "comps".** These are *live comparable listings*, not completed sales. eBay moved sold and
+> completed listings behind a login in July 2026, after which SerpApi's `show_only=Sold` returns
+> zero rows for every query — verified directly against the live API. Rather than quietly relabel
+> asking prices as sale prices, every surface says "listings".
 
 ---
 
-## Sponsor integrations
+## How it works
 
-### SerpApi — four distinct engines, all load-bearing
+```mermaid
+flowchart LR
+    PHOTO["One photograph<br/>several garments"]
+    SPLIT["Split<br/>alpha mask to<br/>connected components"]
 
-| Engine | Purpose | Why it matters |
-|---|---|---|
-| `google_lens` | Brand + garment type from the raw photo | Without it the seller types everything by hand — that *is* the problem |
-| `google_shopping` | Current retail price | The anchor: "retails for $98" |
-| `ebay` | Live comparable listings | The number that matters. A non-Google engine |
-| `google_trends` | 12-month interest series for the brand | "List now" vs "hold" |
+    subgraph PER ["For each garment, in parallel"]
+        direction TB
+        IDENT["Identify<br/>Google Lens"]
+        PRICE["Price<br/>eBay + Shopping + Trends"]
+        SHOOT["Photograph<br/>cut out, sharpen, worn on a model"]
+        IDENT --> PRICE --> SHOOT
+    end
 
-Live search data is not decoration here — **without real comps the price is a hallucination**, and the product has no reason to exist.
+    PUB["Publish<br/>storefront, domain, checkout"]
 
-Two details worth calling out:
+    PHOTO --> SPLIT
+    SPLIT --> IDENT
+    SHOOT --> PUB
+```
 
-- **Google Lens returns a `knowledge_graph` only for catalogued products.** Secondhand clothing on a bed usually is not one, so the real-world response has `visual_matches` and nothing else. Rack falls back to the brand token that *recurs* across independent match titles — more robust than trusting any single result, and reproducible without a model call. See [`IdentifyService`](src/main/java/fileidea/rack/identify/IdentifyService.java).
-- **Every response is cached to disk by content hash.** Development replays from cache instead of re-billing the API, and `rack.serpapi.cache-only=true` runs the whole pipeline offline against previously-recorded real responses.
+**Splitting the photo needs no object-detection model.** Perfect Corp's background removal returns
+an RGBA image whose alpha channel is a mask of everything that is *not* background. Separate
+garments are separate islands of opaque pixels in that mask, so finding them is connected-component
+labelling over a bitmap: no second vendor, no model, no extra key. Each region is cropped from the
+original photo and becomes an ordinary item, which is why the pieces then run the rest of the
+pipeline concurrently with each other.
 
-### Perfect Corp — the photography pipeline, used seller-side
+---
 
-Everyone uses virtual try-on buyer-side: *see it on you before you buy.* Rack inverts it. The seller has no model, no studio, no lightbox — just a phone camera in a badly lit room.
+## Engineering highlights
 
-| Stage | Service | Purpose |
-|---|---|---|
-| 1 | `sod` | Lift the garment off the bedspread |
-| 2 | `enhance` | Sharpen and upscale |
-| 3 | `cloth-v4` | Render the garment **worn** on a model |
+The interesting parts of this project are the places where the obvious approach was wrong.
 
-The model itself is generated with Perfect Corp's **AI Image Generator** (text to image), so no photograph of a real person exists anywhere in the system and one consistent model runs across a seller's whole shop.
+<details open>
+<summary><b>A background-removal endpoint used as an object detector</b></summary>
+<br>
 
-**Two stages were evaluated and cut.** `lighting` raised a black bomber's mean brightness from RGB (52,53,62) to (126,133,143), so the jacket came back grey and try-on faithfully rendered the grey jacket it was handed. `ai-studio` serves themed *portrait* scenes (`female_pink_bunny`, `male_neon_bokeh`), staging a person in a styled setting rather than producing a product backdrop.
+The multi-garment feature needed segmentation. Instead of adding a vision model, the answer was
+already in the alpha channel of a call the pipeline makes anyway. One extra `sod` call per upload
+turns "photograph a piece" into "photograph the pile".
 
-`sod` was nearly cut for the same reason and shouldn't have been. It returns a PNG whose alpha marks the background while the original pixels stay in the RGB channels underneath; writing those bytes to a `.jpg` dropped the mask and the rug came back, so the stored file measured identical to the input. The API was correct and the save was wrong. `ImagingService` composites onto white before storing now.
+Measured, not asserted: **80 pixels of gap in a 2500-pixel photo separates cleanly; zero gap does
+not.** Garments that physically touch are one shape in the mask. Eroding the boundary recovers
+narrowly joined pieces, and that erosion is attempted *only* when plain labelling already found
+nothing to split — so it can add detections but never break a correct single-garment answer.
 
-Every stage is independently feature-flagged (`rack.imaging.*`) and **fails soft**: if a stage errors or times out, the previous image is kept and the pipeline continues. A batch of eight items where item four's try-on fails still publishes the other seven. See [`ImagingService`](src/main/java/fileidea/rack/imaging/ImagingService.java).
+[`GarmentDetector`](src/main/java/fileidea/rack/intake/GarmentDetector.java)
 
-No photograph of a real person appears anywhere in the system — the try-on reference is a synthetic model image.
+</details>
 
-### Stripe — what makes the domain load-bearing
+<details>
+<summary><b>The bug that would have shipped, and why every test passed</b></summary>
+<br>
 
-A domain hosting a catalog is decoration. At publish time Rack creates a Price and a Payment Link
-per item, so each listing carries a hosted checkout that **collects the buyer's shipping address**
-and is restricted to one completed session — every garment is one-of-a-kind. The registered domain
-is therefore the address of a shop that takes money, not a lookbook.
+SerpApi's Google Shopping engine returns a flat `extracted_price`. Its eBay engine nests the same
+value under `price.extracted`. The parser read the flat field for both, so every eBay row was
+silently discarded, the comp list was always empty, the median was always null, and every publish
+threw. The pipeline was dead end to end — and the full test suite passed, because the fixture had
+been written to match the code instead of captured from the real API.
 
-Without a key this degrades to "Contact the seller" and the publish still succeeds.
+**A fixture you wrote yourself only proves your code agrees with itself.**
 
-### name.com — the full domain lifecycle
+</details>
 
-Not one availability call. Six operations in one continuous flow:
+<details>
+<summary><b>Two wrong fixes before the right one</b></summary>
+<br>
 
-`domains:search` → `domains:checkAvailability` → `domains` (register) → `dns/{domain}/records` (A record) → subdomain → `urlForwardings`
+Google Lens returns a `knowledge_graph` only for catalogued products, and secondhand clothing on an
+unmade bed is not one. The fallback picked the word appearing most often across match titles. A real
+pair of jeans came back branded **"Solid"**. Colour and fabric words were added to a blocklist; the
+same photo then came back **"Long"**.
 
-The domain is the product's last step, not a bolt-on: the seller ends the flow owning the address their storefront lives at. See [`NameComHttpClient`](src/main/java/fileidea/rack/integration/namecom/NameComHttpClient.java).
+The second failure is the signal: frequency genuinely cannot distinguish an adjective from a brand,
+because descriptors recur across independent listings exactly the way brands do, and every blocked
+word just promotes the next one. **The approach was wrong, not incomplete.**
 
-> **DNS propagation takes up to 48 hours.** Never demo registration-to-resolution in one take — register the demo domain ahead of recording and cut to the already-live site.
+What works is a different kind of evidence — a list of apparel brands checked first, longest name
+first so "American Eagle" is not truncated to "American", requiring the name in two independent
+listings. Only when nothing is recognised does it fall back to counting, now weighted by position,
+because marketplace titles are written brand-first. The same photo now reads **Zara Jeans**, and the
+comps improved with it.
+
+[`IdentifyService`](src/main/java/fileidea/rack/identify/IdentifyService.java)
+
+</details>
+
+<details>
+<summary><b>A Spring transaction trap where the obvious fix is worse than the bug</b></summary>
+<br>
+
+Garment detection is a vendor round trip of several seconds, and it ran inside the transaction that
+writes the batch — so every upload held a database connection for its whole duration, capping
+concurrent uploads at the pool size for work that touches no database.
+
+The obvious fix, extracting the write into another method on the same class, is a trap:
+`@Transactional` is proxy-based, so a method calling an annotated method on `this` bypasses the
+proxy and runs **with no transaction at all**. That failure is silent and corrupts data, where the
+original merely limits throughput.
+
+The write went into its own bean instead, with the store resolved by id *inside* the transaction
+rather than handed in as a detached entity.
+
+[`IntakeWriter`](src/main/java/fileidea/rack/intake/IntakeWriter.java)
+
+</details>
+
+<details>
+<summary><b>Measure the artifact you store, not the response you got</b></summary>
+<br>
+
+Background removal looked like a no-op. It returns a PNG whose alpha marks the background while the
+original pixels stay in the RGB channels underneath, and those bytes were being written straight to
+`.jpg` — which has no alpha channel. The mask was discarded on save, the bedspread came back, and
+measuring the stored file showed the garment unchanged. The API had worked correctly the whole time.
+
+`ImagingService` composites onto white before storing now. Verified against a live call: 24% of the
+returned image is fully transparent and the garment comes back cleanly cut out.
+
+</details>
+
+<details>
+<summary><b>Certificates issued on demand, gated by the application</b></summary>
+<br>
+
+"Register a domain and your shop is live on it" is only true for arbitrary domains if TLS issuance
+is dynamic. Caddy asks the application before issuing a certificate for any hostname, and the app
+answers 200 only for a domain some store actually registered — without that gate, anyone could point
+a hostname at the IP and burn the ACME rate limit for every real seller.
+
+A custom domain is then served by an internal **forward**, not a redirect: a redirect would bounce
+the visitor off the domain the seller registered, undoing the thing they registered it for.
+
+[`CustomDomainFilter`](src/main/java/fileidea/rack/domain/CustomDomainFilter.java)
+
+</details>
 
 ---
 
 ## Architecture
 
-Spring Boot 4 (Java) · React frontend · PostgreSQL · Docker · deployed to AWS EC2.
+```mermaid
+flowchart TB
+    subgraph EDGE ["Edge"]
+        CADDY["Caddy<br/>on-demand TLS, gated by the app"]
+    end
 
+    subgraph APP ["One deployable jar"]
+        UI["React + Vite<br/>upload, live status, results"]
+        API["Spring Boot 4<br/>controllers / services / repositories"]
+        POLL["Scheduled worker<br/>bounded pool, in-flight guard"]
+    end
+
+    DB[("PostgreSQL<br/>items, tasks, comps, stores")]
+
+    subgraph VEND ["Vendors"]
+        SERP["SerpApi<br/>4 engines"]
+        PC["Perfect Corp<br/>3 stages"]
+        NC["name.com"]
+        STR["Stripe"]
+    end
+
+    CADDY --> UI
+    UI <--> API
+    API <--> DB
+    API --> POLL
+    POLL <--> DB
+    POLL --> SERP
+    POLL --> PC
+    API --> NC
+    API --> STR
 ```
-┌─────────────┐      ┌──────────────────────┐      ┌────────────────┐
-│    React    │ <──> │   Spring Boot API    │ <──> │   PostgreSQL   │
-│  (batch UI, │      │  ctrl / service /    │      │  items, tasks, │
-│   live      │      │  repo + async task   │      │  comps, stores │
-│   status)   │      │  orchestrator        │      └────────────────┘
-└─────────────┘      └──────────┬───────────┘
-                                │
-                     ┌──────────┴───────────┐
-                     │  Task queue + poller │
-                     │  (Postgres-backed,   │
-                     │   @Scheduled worker) │
-                     └──────────┬───────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        │                       │                       │
-   SerpApi                Perfect Corp              name.com
-```
 
-**This is not a wrapper around one API call.** A batch of eight items fans out to 30–40 asynchronous vendor tasks. That is handled properly:
+The React build is written into Spring's static resources, so **a single jar** serves the UI, the
+API, the storefront and uploaded images from one origin. One artifact means the version you tested
+is the version that runs, and one origin removes an entire class of CORS problem.
 
-- Every external call is a row in a `tasks` table with status, attempt count, and an **idempotency key**, so a retry never double-charges vendor credits.
-- A `@Scheduled` worker dispatches independent item chains **in parallel** across a bounded pool, with an in-flight guard so a tick never re-dispatches work that is still running.
-- Tasks stop retrying after four attempts. One bad photo cannot loop.
-- **Partial failure never kills a batch.** Each item is its own chain; failures are contained and the batch settles to `PARTIAL_FAILURE` rather than hanging.
-- Perfect Corp polling uses exponential backoff from 1.5s with a hard 120s ceiling per stage.
+**This is not a wrapper around one API call.** A batch of eight items fans out to 30–40 asynchronous
+vendor calls, handled as follows:
+
+| Concern | How it is handled |
+|---|---|
+| Double-charging vendors | Every external call is a row in `tasks` with an **idempotency key** |
+| Transient vendor failure | Retry to `PENDING`, capped at four attempts, then `ERROR` |
+| Independent work | Item chains dispatched in parallel across a bounded pool, with an in-flight guard |
+| Independent questions | The three SerpApi engines run concurrently on virtual threads — 24s → 8.8s |
+| Partial failure | Each item is its own chain; a batch settles to `PARTIAL_FAILURE` rather than hanging |
+| Slow vendor polling | Exponential backoff from 500ms, capped at 2s, hard 120s ceiling per stage |
 
 ### Modules
 
 | Package | Responsibility |
 |---|---|
-| `intake` | Upload, batch creation, image storage |
-| `identify` | Google Lens interpretation, brand/type/category extraction |
-| `pricing` | Comp retrieval, deterministic price computation |
-| `imaging` | Perfect Corp pipeline, per-stage flags |
+| `intake` | Upload, garment detection, batch creation, image storage |
+| `identify` | Google Lens interpretation, brand / type / category extraction |
+| `pricing` | Comp retrieval, deduplication, deterministic price computation |
+| `imaging` | Perfect Corp pipeline, per-stage feature flags |
 | `listing` | Copy generation, storefront rendering |
-| `domain` | name.com search / register / DNS |
-| `integration/stripe` | Hosted checkout per listing |
+| `domain` | name.com lifecycle, custom-domain routing, TLS gate |
+| `integration/*` | Vendor HTTP clients, image storage |
 | `task` | Vendor task orchestration and polling |
+
+---
+
+## Vendor integrations
+
+### SerpApi — four engines, all load-bearing
+
+| Engine | Purpose | Why it matters |
+|---|---|---|
+| `google_lens` | Brand and garment type from the raw photo | Without it the seller types everything by hand — that *is* the problem |
+| `google_shopping` | Current retail price | The anchor: "retails for $98" |
+| `ebay` | Live comparable listings | The number that matters, and a non-Google engine |
+| `google_trends` | 12-month interest series | "List now" versus "hold" |
+
+Every response is cached to disk by content hash, so development replays instead of re-billing.
+
+> `rack.serpapi.cache-only=true` runs the pipeline offline against previously recorded responses.
+> **Never enable it on a deployed instance** — on a cache miss it throws rather than falling back to
+> a live search, so any new upload fails.
+
+### Perfect Corp — the photography pipeline, inverted
+
+Everyone uses virtual try-on buyer-side: *see it on you before you buy.* Rack points it at the
+seller, who has no model, no studio, and a phone camera in bad light.
+
+| Stage | Service | Purpose |
+|---|---|---|
+| 0 | `sod` | Foreground mask → **split the photo into garments** |
+| 1 | `sod` | Lift each garment off the bedspread |
+| 2 | `enhance` | Sharpen and upscale |
+| 3 | `cloth-v4` | Render the garment **worn** on a model |
+
+The model is generated with Perfect Corp's **AI Image Generator** (text to image), so no photograph
+of a real person exists anywhere in the system and one consistent model runs across a whole shop.
+
+**Two stages were evaluated and cut.** `lighting` raised a black bomber's mean brightness from RGB
+(52,53,62) to (126,133,143) — the jacket came back grey, and try-on faithfully rendered the grey
+jacket it was handed. `ai-studio` serves themed *portrait* scenes (`female_pink_bunny`,
+`male_neon_bokeh`), which stage a person rather than back a flat garment.
+
+Every stage is independently feature-flagged (`rack.imaging.*`) and **fails soft**: a stage that
+errors keeps the previous image and the pipeline continues.
+
+### name.com — the full domain lifecycle
+
+`domains:search` → `domains:checkAvailability` → `domains` (register) → `dns/{domain}/records` →
+subdomain → `urlForwardings`
+
+> **Honest status.** Search, availability and registration complete against name.com's sandbox and
+> the domain appears in the account. The three DNS calls return 404 there, because the sandbox
+> registers a domain without provisioning a zone behind it. Same code path, same requests, and they
+> land in production. The UI reports a reason **per step** rather than showing six ticks it cannot
+> back.
+
+The domain is not a receipt. A hostname resolves to its store, Caddy issues a certificate on demand
+through a gated endpoint, and the shop is served at that address. A seller who already owns a domain
+can point it here with no registrar call at all.
+
+### Stripe — what makes the domain load-bearing
+
+A domain hosting a catalog is decoration. At publish time Rack creates a Product (with the on-model
+render and description), a Price, and a Payment Link per item, so each listing carries a hosted
+checkout that **collects the buyer's shipping address** and is restricted to one completed session —
+every garment is one of a kind.
+
+Without a key this degrades to "Contact the seller" and the publish still succeeds.
 
 ---
 
 ## Running it
 
-### 1. Database
+**Prerequisites:** JDK 25, Node 20+, Docker.
 
 ```bash
+# 1. Database
 docker compose up -d
-```
 
-### 2. Keys
+# 2. Frontend into Spring's static resources
+npm --prefix frontend install && npm --prefix frontend run build
 
-Every integration degrades gracefully without a key, so the app boots and the UI works before you have any. See [SETUP.md](SETUP.md) for how to supply them.
-
-### 3. Run
-
-```bash
+# 3. Run
 ./mvnw spring-boot:run
 ```
 
-Open http://localhost:8080.
+Open <http://localhost:8080>.
 
-### 4. Tests
+**Keys are optional.** Every integration degrades gracefully: no Perfect Corp key and the original
+photo becomes the catalog image, no name.com credentials and the storefront serves at a path, no
+Stripe and the page shows contact details. Each of those is a tested path, not a hope. Supply keys
+as environment variables or a `.env` file in the working directory:
+
+```
+RACK_SERPAPI_API_KEY=...
+RACK_PERFECTCORP_API_KEY=...
+RACK_PERFECTCORP_MODEL_URL=...      # public https URL of a synthetic model image
+RACK_NAMECOM_USERNAME=...
+RACK_NAMECOM_TOKEN=...
+RACK_STRIPE_SECRET_KEY=...
+```
+
+### Tests
 
 ```bash
 ./mvnw test
 ```
 
-40 tests, no network required. They pin the exact JSON shapes each vendor returns — including the ones that differ between engines, which is where the real bugs live.
+**80 tests, none of which need network access.** They pin the exact JSON shape each vendor returns —
+including the shapes that differ between engines of the same vendor, which is where the real bugs
+turned out to live.
+
+---
+
+## Known limits
+
+Stated because a limit you can measure is more useful than one you discover.
+
+| Limit | Detail |
+|---|---|
+| **Touching garments** | Two pieces in contact are one shape in the mask and return as one item. 80px of gap in a 2500px photo separates cleanly; zero gap does not. |
+| **Brand identification** | A brand outside the recognised list falls back to a positional heuristic and can be wrong. The brand is editable in place, and a correction re-runs pricing and copy. |
+| **No auth** | Single-tenant by design for this build. Everything hangs off one store id. |
+| **name.com DNS** | Sandbox does not host DNS for test domains; those three calls land only in production. |
+| **No cross-posting** | Cut deliberately — the OAuth review cycles alone would have consumed the timeline. |
 
 ---
 
@@ -216,8 +432,14 @@ Open http://localhost:8080.
 | Path | What's there |
 |---|---|
 | `src/main/java/fileidea/rack/` | Backend, organised by module |
-| `src/main/resources/static/index.html` | Minimal reference UI |
+| `src/test/java/` | 80 tests |
 | `src/test/resources/fixtures/` | Recorded vendor responses used by the tests |
+| `frontend/` | React + Vite source; builds into Spring's static resources |
+| `docs/` | README assets |
 | `docker-compose.yml` | Postgres for local development |
-| `SETUP.md` | API keys and configuration |
-| `DEVPOST.md` | Submission copy for the overall round and each sponsor challenge |
+
+---
+
+<div align="center">
+<sub><b>Live at <a href="https://rackai.store">rackai.store</a></b> · Built for the DevNetwork [API + Cloud + AI] Hackathon 2026</sub>
+</div>
